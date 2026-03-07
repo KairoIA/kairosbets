@@ -18,13 +18,21 @@
     #splash img{width:80px;height:80px;border-radius:20px}
     #splash p{color:rgba(255,255,255,0.3);font-size:11px;letter-spacing:2px;text-transform:uppercase;font-family:sans-serif}
   </style>
+  <script>
+    const _BASE = window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, '');
+    const ICON_URL = _BASE + '/public/icons/icon-192.png';
+    window._LOGO = ICON_URL;
+  </script>
 </head>
 <body>
   <div id="splash">
-    <img src="public/icons/icon-192.png" alt="KairosBets"/>
+    <img id="splash-logo" src="" alt="KairosBets"/>
     <p>Cargando...</p>
   </div>
   <div id="root"></div>
+  <script>
+    document.getElementById('splash-logo').src = window._LOGO;
+  </script>
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -36,7 +44,7 @@
   </script>
   <script type="text/babel" data-presets="react">
 const { useState, useEffect, useRef } = React;
-const LOGO = "public/icons/icon-192.png";
+const LOGO = window._LOGO;
 const INITIAL_BANKROLL = 15;
 const HISTORICAL = [
   { id:"h1",date:"2026-02-24",type:"Combinada",desc:"Burton gana (3.20) × Bradford empate (3.50) × Inter empate descanso (3.20)",odds:35.84,stake:15,result:"cashout",pl:59.16,notes:"Cash out anticipado." },
