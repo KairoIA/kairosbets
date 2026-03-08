@@ -2,24 +2,16 @@
   "name": "KairosBets",
   "short_name": "KairosBets",
   "description": "Value Betting Tracker — KairosLab",
-  "start_url": "/",
+  "start_url": "/kairosbets/",
   "display": "standalone",
   "background_color": "#0c0e18",
   "theme_color": "#0c0e18",
   "orientation": "portrait",
-  "scope": "/",
+  "scope": "/kairosbets/",
   "lang": "es",
   "icons": [
-    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
-    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+    { "src": "/kairosbets/public/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/kairosbets/public/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
   ],
-  "categories": ["finance", "sports"],
-  "shortcuts": [
-    {
-      "name": "Nueva apuesta",
-      "short_name": "Nueva",
-      "url": "/?action=new",
-      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
-    }
-  ]
+  "categories": ["finance", "sports"]
 }
