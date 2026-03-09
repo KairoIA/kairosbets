@@ -9,73 +9,75 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
   <meta name="apple-mobile-web-app-title" content="KairosBets"/>
   <link rel="manifest" href="manifest.json"/>
-  <link rel="apple-touch-icon" href="public/icons/icon-192.png"/>
   <title>KairosBets</title>
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
     html,body,#root{height:100dvh;background:#0c0e18;overflow:hidden}
-    #splash{position:fixed;inset:0;background:#0c0e18;display:flex;flex-direction:column;
-      align-items:center;justify-content:center;gap:16px;z-index:9999;transition:opacity 0.4s}
-    #splash img{width:80px;height:80px;border-radius:20px;object-fit:cover}
-    #splash p{color:rgba(255,255,255,0.3);font-size:11px;letter-spacing:2px;
-      text-transform:uppercase;font-family:sans-serif}
+    #splash{position:fixed;inset:0;background:#0c0e18;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:9999;transition:opacity 0.4s}
+    #splash-icon{width:80px;height:80px;border-radius:20px;background:#111628;border:1px solid rgba(201,168,76,0.3);display:flex;align-items:center;justify-content:center}
+    #splash p{color:rgba(255,255,255,0.3);font-size:11px;letter-spacing:2px;text-transform:uppercase;font-family:sans-serif}
   </style>
 </head>
 <body>
   <div id="splash">
-    <img id="spl-img" src="" alt="K" style="background:#111628"/>
+    <div id="splash-icon">
+      <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
+        <text x="22" y="32" text-anchor="middle" font-family="Georgia,serif" font-size="30" font-weight="700" fill="#e8c96a">K</text>
+      </svg>
+    </div>
     <p>Cargando...</p>
   </div>
   <div id="root"></div>
-
-  <script>
-    window._LOGO = "data:image/jpeg;base64,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";
-    document.getElementById('spl-img').src = window._LOGO;
-  </script>
-
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-
   <script>
-    window.storage = {
-      get: async function(k){ try{ var v=localStorage.getItem(k); return v?{value:v}:null; }catch(e){ return null; } },
-      set: async function(k,v){ try{ localStorage.setItem(k,v); return {key:k,value:v}; }catch(e){ return null; } }
+    window.storage={
+      get:async function(k){try{var v=localStorage.getItem(k);return v?{value:v}:null;}catch(e){return null;}},
+      set:async function(k,v){try{localStorage.setItem(k,v);return{key:k,value:v};}catch(e){return null;}}
     };
   </script>
-
   <script type="text/babel" data-presets="react">
-const { useState, useEffect, useRef } = React;
-const LOGO = window._LOGO;
-const STORAGE_KEY = 'kairosbets_v3';
-const INITIAL_BANKROLL = 15;
+const{useState,useEffect,useRef}=React;
+const STORAGE_KEY='kairosbets_v3';
+const INITIAL_BANKROLL=15;
 
-const HISTORICAL = [
-  { id:"h1", date:"2026-02-24", type:"Combinada", desc:"Burton gana (3.20) × Bradford empate (3.50) × Inter empate descanso (3.20)", odds:35.84, stake:15, result:"cashout", pl:59.16, notes:"Cash out anticipado." },
-  { id:"h2", date:"2026-02-25", type:"Simple",    desc:"Monaco DC X2 vs PSG", odds:2.20, stake:15, result:"win", pl:18.00, notes:"" },
-  { id:"h3", date:"2026-02-26", type:"Combinada", desc:"Jagiellonia X2 (2.50) × Fenerbahce X2 (2.30)", odds:5.75, stake:15, result:"win", pl:68.47, notes:"" },
-  { id:"h4", date:"2026-02-28", type:"Combinada", desc:"Liverpool BTTS (1.61) × Barcelona +3.5 (1.66) × Man City gana (1.66)", odds:4.44, stake:15, result:"win", pl:50.94, notes:"" },
-  { id:"h5", date:"2026-03-01", type:"Combinada", desc:"Arsenal gana Chelsea (1.55) × Over 2.5 Girona/Celta (1.90)", odds:2.945, stake:15, result:"win", pl:29.17, notes:"" },
-  { id:"h6", date:"2026-03-03", type:"Combinada", desc:"Everton gana (1.61) × Liverpool gana (1.44) × Over 2.5 Como/Inter (2.25)", odds:5.22, stake:15, result:"loss", pl:-15.00, notes:"" },
-  { id:"h7", date:"2026-03-04", type:"Combinada", desc:"Aston Villa DC X2 (1.57) × Arsenal gana Brighton (1.44) × Man City gana Forest (1.57)", odds:3.55, stake:15, result:"loss", pl:-15.00, notes:"" },
-  { id:"h8", date:"2026-03-05", type:"Combinada", desc:"Lyon gana Coupe de France (2.55) × Over 2.5 (1.72)", odds:4.00, stake:15, result:"loss", pl:-15.00, notes:"" },
-  { id:"h9", date:"2026-03-06", type:"Combinada", desc:"Elversberg gana (1.83) × Bayern HT Local (1.44) × Nancy DC X2 (1.44)", odds:3.80, stake:15, result:"cashout", pl:38.22, notes:"Cash out anticipado." },
-  { id:"h10", date:"2026-03-07", type:"Combinada", desc:"Nantes U2.5 (1.61) × Man City gana FA Cup (2.05) × Swansea U2.5 (1.72)", odds:5.677, stake:15, result:"win", pl:70.15, notes:"Nantes 0-1 ✅ | Man City 3-1 ✅ | Swansea 2-0 ✅" },
+const HISTORICAL=[
+  {id:"h1",date:"2026-02-24",type:"Combinada",desc:"Burton gana (3.20) × Bradford empate (3.50) × Inter empate descanso (3.20)",odds:35.84,stake:15,result:"cashout",pl:59.16,notes:"Cash out anticipado."},
+  {id:"h2",date:"2026-02-25",type:"Simple",desc:"Monaco DC X2 vs PSG",odds:2.20,stake:15,result:"win",pl:18.00,notes:""},
+  {id:"h3",date:"2026-02-26",type:"Combinada",desc:"Jagiellonia X2 (2.50) × Fenerbahce X2 (2.30)",odds:5.75,stake:15,result:"win",pl:68.47,notes:""},
+  {id:"h4",date:"2026-02-28",type:"Combinada",desc:"Liverpool BTTS (1.61) × Barcelona +3.5 (1.66) × Man City gana (1.66)",odds:4.44,stake:15,result:"win",pl:50.94,notes:""},
+  {id:"h5",date:"2026-03-01",type:"Combinada",desc:"Arsenal gana Chelsea (1.55) × Over 2.5 Girona/Celta (1.90)",odds:2.945,stake:15,result:"win",pl:29.17,notes:""},
+  {id:"h6",date:"2026-03-03",type:"Combinada",desc:"Everton gana (1.61) × Liverpool gana (1.44) × Over 2.5 Como/Inter (2.25)",odds:5.22,stake:15,result:"loss",pl:-15.00,notes:""},
+  {id:"h7",date:"2026-03-04",type:"Combinada",desc:"Aston Villa DC X2 (1.57) × Arsenal gana Brighton (1.44) × Man City gana Forest (1.57)",odds:3.55,stake:15,result:"loss",pl:-15.00,notes:""},
+  {id:"h8",date:"2026-03-05",type:"Combinada",desc:"Lyon gana Coupe de France (2.55) × Over 2.5 (1.72)",odds:4.00,stake:15,result:"loss",pl:-15.00,notes:""},
+  {id:"h9",date:"2026-03-06",type:"Combinada",desc:"Elversberg gana (1.83) × Bayern HT Local (1.44) × Nancy DC X2 (1.44)",odds:3.80,stake:15,result:"cashout",pl:38.22,notes:"Cash out anticipado."},
+  {id:"h10",date:"2026-03-07",type:"Combinada",desc:"Nantes U2.5 (1.61) × Man City gana FA Cup (2.05) × Swansea U2.5 (1.72)",odds:5.677,stake:15,result:"win",pl:70.15,notes:"Nantes 0-1 ✅ | Man City 3-1 ✅ | Swansea 2-0 ✅"},
 ];
 
+function Logo({size=34}){
+  return(
+    <div style={{width:size,height:size,borderRadius:size*0.24,background:"#111628",border:"1px solid rgba(201,168,76,0.35)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+      <svg width={size*0.72} height={size*0.72} viewBox="0 0 26 26" fill="none">
+        <text x="13" y="20" textAnchor="middle" fontFamily="Georgia,serif" fontSize="20" fontWeight="700" fill="#e8c96a">K</text>
+      </svg>
+    </div>
+  );
+}
+
 function getS(r,pl){
-  if(r==="win")     return{t:"#5cb85c",bg:"rgba(92,184,92,0.07)",bd:"rgba(92,184,92,0.18)",l:"Ganada",i:"✓"};
-  if(r==="loss")    return{t:"#d9534f",bg:"rgba(217,83,79,0.07)",bd:"rgba(217,83,79,0.18)",l:"Perdida",i:"✗"};
-  if(r==="pending") return{t:"#4a90c4",bg:"rgba(74,144,196,0.07)",bd:"rgba(74,144,196,0.18)",l:"Pendiente",i:"○"};
+  if(r==="win")return{t:"#5cb85c",bg:"rgba(92,184,92,0.07)",bd:"rgba(92,184,92,0.18)",l:"Ganada",i:"✓"};
+  if(r==="loss")return{t:"#d9534f",bg:"rgba(217,83,79,0.07)",bd:"rgba(217,83,79,0.18)",l:"Perdida",i:"✗"};
+  if(r==="pending")return{t:"#4a90c4",bg:"rgba(74,144,196,0.07)",bd:"rgba(74,144,196,0.18)",l:"Pendiente",i:"○"};
   if(r==="cashout"){
-    if(pl==null) return{t:"#c9a84c",bg:"rgba(201,168,76,0.07)",bd:"rgba(201,168,76,0.18)",l:"Cash Out",i:"◈"};
-    if(pl<0)     return{t:"#e07060",bg:"rgba(224,112,96,0.07)",bd:"rgba(224,112,96,0.18)",l:"Cash Out -",i:"◈"};
-    const ret=pl+15; if(ret>=13&&ret<=17) return{t:"#d4b84a",bg:"rgba(212,184,74,0.07)",bd:"rgba(212,184,74,0.18)",l:"Cash Out ~",i:"◈"};
+    if(pl==null)return{t:"#c9a84c",bg:"rgba(201,168,76,0.07)",bd:"rgba(201,168,76,0.18)",l:"Cash Out",i:"◈"};
+    if(pl<0)return{t:"#e07060",bg:"rgba(224,112,96,0.07)",bd:"rgba(224,112,96,0.18)",l:"Cash Out -",i:"◈"};
+    const ret=pl+15;if(ret>=13&&ret<=17)return{t:"#d4b84a",bg:"rgba(212,184,74,0.07)",bd:"rgba(212,184,74,0.18)",l:"Cash Out ~",i:"◈"};
     return{t:"#3eb58a",bg:"rgba(62,181,138,0.07)",bd:"rgba(62,181,138,0.18)",l:"Cash Out +",i:"◈"};
   }
   return{t:"#888",bg:"rgba(136,136,136,0.07)",bd:"rgba(136,136,136,0.18)",l:r,i:"."};
 }
-function isPos(b){ return b.result==="win"||(b.result==="cashout"&&b.pl!=null&&b.pl>0); }
+function isPos(b){return b.result==="win"||(b.result==="cashout"&&b.pl!=null&&b.pl>0);}
 function computeStreak(s){
   let streak=0,st=null;
   for(let i=s.length-1;i>=0;i--){
@@ -87,7 +89,7 @@ function computeStreak(s){
 }
 function computeBankrolls(bets){
   let bank=INITIAL_BANKROLL;
-  return bets.map(b=>{ if(b.pl!=null){bank=parseFloat((bank+b.pl).toFixed(2));return{...b,bankroll:bank};} return{...b,bankroll:null}; });
+  return bets.map(b=>{if(b.pl!=null){bank=parseFloat((bank+b.pl).toFixed(2));return{...b,bankroll:bank};}return{...b,bankroll:null};});
 }
 function getDB(bets){
   const s=bets.filter(b=>b.result!=="pending");
@@ -117,7 +119,7 @@ function Header({bets}){
   const p=bets.filter(b=>b.result==="pending").length;
   return <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 18px",background:"var(--bg2)",borderBottom:"1px solid var(--border)",flexShrink:0}}>
     <div style={{display:"flex",alignItems:"center",gap:10}}>
-      <img src={LOGO} style={{width:34,height:34,borderRadius:8,objectFit:"cover"}} alt="K" onError={e=>{ e.target.style.display='none'; }}/>
+      <Logo size={34}/>
       <div>
         <div style={{fontSize:16,fontWeight:600}}><span style={{color:"var(--gold2)"}}>Kairos</span><span style={{color:"var(--text)"}}>Bets</span></div>
         <div style={{fontSize:10,color:"var(--muted)",letterSpacing:1.2,textTransform:"uppercase"}}>Value Tracker</div>
@@ -128,11 +130,11 @@ function Header({bets}){
 }
 function Chart({bets,onClick}){
   const settled=bets.filter(b=>b.result!=="pending"&&b.bankroll!=null);
-  if(settled.length<2) return <div style={{padding:20,color:"var(--muted)",fontSize:13,textAlign:"center"}}>Necesitas 2+ apuestas liquidadas</div>;
+  if(settled.length<2)return <div style={{padding:20,color:"var(--muted)",fontSize:13,textAlign:"center"}}>Necesitas 2+ apuestas liquidadas</div>;
   const W=360,H=200,P={t:16,r:16,b:28,l:48},cW=W-P.l-P.r,cH=H-P.t-P.b;
   const pts=[{bankroll:INITIAL_BANKROLL},...settled];
   const vs=pts.map(p=>p.bankroll),mn=Math.min(...vs),mx=Math.max(...vs),rng=mx-mn||1,pv=rng*0.12;
-  const xS=i=>P.l+(i/(pts.length-1))*cW, yS=v=>P.t+cH-((v-mn+pv)/(rng+pv*2))*cH;
+  const xS=i=>P.l+(i/(pts.length-1))*cW,yS=v=>P.t+cH-((v-mn+pv)/(rng+pv*2))*cH;
   const lp=pts.map((p,i)=>`${i===0?"M":"L"} ${xS(i).toFixed(1)} ${yS(p.bankroll).toFixed(1)}`).join(" ");
   const ap=lp+` L ${xS(pts.length-1).toFixed(1)} ${(P.t+cH).toFixed(1)} L ${xS(0).toFixed(1)} ${(P.t+cH).toFixed(1)} Z`;
   const tv=Array.from({length:4},(_,i)=>mn-pv+((rng+pv*2)/3)*i);
@@ -144,27 +146,23 @@ function Chart({bets,onClick}){
       </defs>
       {tv.map((v,i)=>(<g key={i}><line x1={P.l} y1={yS(v)} x2={W-P.r} y2={yS(v)} stroke="rgba(255,255,255,0.05)" strokeWidth="1"/><text x={P.l-6} y={yS(v)+4} textAnchor="end" fill="rgba(160,168,188,0.45)" fontSize="9">{Math.round(v)}</text></g>))}
       <line x1={P.l} y1={yS(INITIAL_BANKROLL)} x2={W-P.r} y2={yS(INITIAL_BANKROLL)} stroke="rgba(201,168,76,0.25)" strokeWidth="1" strokeDasharray="3,3"/>
-      <path d={ap} fill="url(#ag)"/>
-      <path d={lp} fill="none" stroke="url(#lg)" strokeWidth="1.8" strokeLinejoin="round" strokeLinecap="round"/>
-      {pts.map((p,i)=>{ if(i===0) return <circle key={i} cx={xS(i)} cy={yS(p.bankroll)} r="3" fill="var(--bg2)" stroke="rgba(201,168,76,0.6)" strokeWidth="1.5"/>; const s=getS(p.result,p.pl); return <circle key={i} cx={xS(i)} cy={yS(p.bankroll)} r="5" fill="var(--bg2)" stroke={s.t} strokeWidth="1.8" style={{cursor:"pointer"}} onClick={()=>onClick&&onClick(p)}/>; })}
-      {pts.map((p,i)=>{ if(i===0||i===pts.length-1||pts.length<=8||i%Math.ceil(pts.length/5)===0) return <text key={i} x={xS(i)} y={H-6} textAnchor="middle" fill="rgba(160,168,188,0.4)" fontSize="8">{i===0?"inicio":fmtD(p.date)}</text>; return null; })}
+      <path d={ap} fill="url(#ag)"/><path d={lp} fill="none" stroke="url(#lg)" strokeWidth="1.8" strokeLinejoin="round" strokeLinecap="round"/>
+      {pts.map((p,i)=>{if(i===0)return <circle key={i} cx={xS(i)} cy={yS(p.bankroll)} r="3" fill="var(--bg2)" stroke="rgba(201,168,76,0.6)" strokeWidth="1.5"/>;const s=getS(p.result,p.pl);return <circle key={i} cx={xS(i)} cy={yS(p.bankroll)} r="5" fill="var(--bg2)" stroke={s.t} strokeWidth="1.8" style={{cursor:"pointer"}} onClick={()=>onClick&&onClick(p)}/>;})}
+      {pts.map((p,i)=>{if(i===0||i===pts.length-1||pts.length<=8||i%Math.ceil(pts.length/5)===0)return <text key={i} x={xS(i)} y={H-6} textAnchor="middle" fill="rgba(160,168,188,0.4)" fontSize="8">{i===0?"inicio":fmtD(p.date)}</text>;return null;})}
     </svg>
   );
 }
 function ChartTab({bets,onBet}){
   const [sel,setSel]=useState(null);
-  const settled=bets.filter(b=>b.result!=="pending");
-  const tPL=settled.reduce((a,b)=>a+(b.pl||0),0);
+  const settled=bets.filter(b=>b.result!=="pending"),tPL=settled.reduce((a,b)=>a+(b.pl||0),0);
   const db=getDB(bets),roi=((db-INITIAL_BANKROLL)/INITIAL_BANKROLL*100);
   return(
     <div style={{flex:1,overflow:"auto",display:"flex",flexDirection:"column"}}>
-      <div style={{padding:"16px 18px 12px"}}>
-        <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-          <Bdg color="var(--gold)" border="rgba(201,168,76,0.25)">{fmtA(db)}</Bdg>
-          <Bdg color={tPL>=0?"#5cb85c":"#d9534f"} border={tPL>=0?"rgba(92,184,92,0.3)":"rgba(217,83,79,0.3)"}>{fmtM(tPL)} neto</Bdg>
-          <Bdg color={roi>=0?"var(--cyan)":"#d9534f"} border={roi>=0?"rgba(74,144,196,0.3)":"rgba(217,83,79,0.3)"}>{roi>=0?"+":""}{roi.toFixed(0)}% ROI</Bdg>
-        </div>
-      </div><Sep/>
+      <div style={{padding:"16px 18px 12px"}}><div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+        <Bdg color="var(--gold)" border="rgba(201,168,76,0.25)">{fmtA(db)}</Bdg>
+        <Bdg color={tPL>=0?"#5cb85c":"#d9534f"} border={tPL>=0?"rgba(92,184,92,0.3)":"rgba(217,83,79,0.3)"}>{fmtM(tPL)} neto</Bdg>
+        <Bdg color={roi>=0?"var(--cyan)":"#d9534f"} border={roi>=0?"rgba(74,144,196,0.3)":"rgba(217,83,79,0.3)"}>{roi>=0?"+":""}{roi.toFixed(0)}% ROI</Bdg>
+      </div></div><Sep/>
       <div style={{padding:"16px 14px 8px"}}>
         <div style={{fontSize:11,color:"var(--muted)",letterSpacing:1.4,textTransform:"uppercase",marginBottom:12}}>Bankroll · toca un punto</div>
         <Chart bets={bets} onClick={p=>setSel(sel?.id===p.id?null:p)}/>
@@ -176,11 +174,11 @@ function ChartTab({bets,onBet}){
       </div></div><Sep/></>
       )}
       <div style={{padding:"8px 18px"}}><div style={{fontSize:11,color:"var(--muted)",letterSpacing:1.4,textTransform:"uppercase"}}>Todas las apuestas</div></div>
-      {[...settled].reverse().map((b,i)=>{ const s=getS(b.result,b.pl); return(<div key={b.id}><div onClick={()=>setSel(sel?.id===b.id?null:b)} style={{padding:"10px 18px",cursor:"pointer",display:"flex",alignItems:"center",gap:10,background:sel?.id===b.id?s.bg:"transparent"}}>
+      {[...settled].reverse().map((b,i)=>{const s=getS(b.result,b.pl);return(<div key={b.id}><div onClick={()=>setSel(sel?.id===b.id?null:b)} style={{padding:"10px 18px",cursor:"pointer",display:"flex",alignItems:"center",gap:10,background:sel?.id===b.id?s.bg:"transparent"}}>
         <RDot result={b.result} pl={b.pl} size={26}/>
         <div style={{flex:1,minWidth:0}}><div style={{fontSize:12,color:"var(--text)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{b.desc}</div><div style={{fontSize:10,color:"var(--muted)",marginTop:2}}>{fmtD(b.date)} · @{b.odds}</div></div>
         <div style={{textAlign:"right",flexShrink:0}}><div style={{fontSize:13,fontFamily:"'DM Mono',monospace",color:s.t}}>{fmtM(b.pl)}</div>{b.bankroll&&<div style={{fontSize:10,color:"var(--muted)"}}>{fmtA(b.bankroll)}</div>}</div>
-      </div>{i<settled.length-1&&<Sep/>}</div>); })}
+      </div>{i<settled.length-1&&<Sep/>}</div>);})}
       <div style={{height:80}}/>
     </div>
   );
@@ -235,7 +233,7 @@ function History({bets,onBet}){
   const sorted=[...bets].reverse(),tPL=bets.filter(b=>b.pl!=null).reduce((a,b)=>a+(b.pl||0),0);
   return(<div style={{flex:1,overflow:"auto"}}>
     <div style={{padding:"14px 18px 10px",display:"flex",justifyContent:"space-between",alignItems:"center"}}><div style={{fontSize:11,color:"var(--muted)",letterSpacing:1.4,textTransform:"uppercase"}}>{bets.length} apuestas</div><div style={{fontSize:13,fontFamily:"'DM Mono',monospace",color:tPL>=0?"#5cb85c":"#d9534f"}}>{fmtM(tPL)}</div></div><Sep/>
-    {sorted.map((b,i)=>{ const s=getS(b.result,b.pl); return(<div key={b.id}><div onClick={()=>onBet(b)} style={{padding:"12px 18px",cursor:"pointer",display:"flex",gap:12,alignItems:"flex-start"}}>
+    {sorted.map((b,i)=>{const s=getS(b.result,b.pl);return(<div key={b.id}><div onClick={()=>onBet(b)} style={{padding:"12px 18px",cursor:"pointer",display:"flex",gap:12,alignItems:"flex-start"}}>
       <RDot result={b.result} pl={b.pl} size={30}/>
       <div style={{flex:1,minWidth:0}}>
         <div style={{display:"flex",justifyContent:"space-between",marginBottom:4,gap:8}}><span style={{fontSize:11,color:"var(--muted)"}}>{fmtD(b.date)} · {b.type}</span><span style={{fontSize:13,fontFamily:"'DM Mono',monospace",fontWeight:500,color:b.result==="pending"?"var(--muted)":s.t,flexShrink:0}}>{b.result==="pending"?"—":fmtM(b.pl)}</span></div>
@@ -243,14 +241,14 @@ function History({bets,onBet}){
         <div style={{display:"flex",gap:5,flexWrap:"wrap"}}><Bdg>@{b.odds}</Bdg><Bdg>€{b.stake}</Bdg><Bdg color={s.t} border={s.bd}>{s.l}</Bdg></div>
         {b.bankroll!=null&&<div style={{fontSize:11,color:"var(--muted)",marginTop:5}}>Bankroll → {fmtA(b.bankroll)}</div>}
       </div>
-    </div>{i<sorted.length-1&&<Sep/>}</div>); })}
+    </div>{i<sorted.length-1&&<Sep/>}</div>);})}
     <div style={{height:80}}/>
   </div>);
 }
 function Detail({bet,onBack,onUpdate}){
   const [res,setRes]=useState(bet.result),[ret,setRet]=useState(bet.result!=="pending"&&bet.pl!=null?(bet.stake+bet.pl).toFixed(2):""),[notes,setNotes]=useState(bet.notes||""),[saved,setSaved]=useState(false);
   const pl=res==="loss"?-bet.stake:ret!==""?parseFloat((parseFloat(ret)-bet.stake).toFixed(2)):null;
-  const save=()=>{ onUpdate({...bet,result:res,pl:res==="pending"?null:pl,notes}); setSaved(true); setTimeout(()=>{setSaved(false);onBack();},600); };
+  const save=()=>{onUpdate({...bet,result:res,pl:res==="pending"?null:pl,notes});setSaved(true);setTimeout(()=>{setSaved(false);onBack();},600);};
   const inp={width:"100%",padding:"11px 13px",borderRadius:7,border:"1px solid var(--border)",background:"var(--bg3)",color:"var(--text)",fontSize:14};
   return(<div style={{flex:1,overflow:"auto",padding:"14px 18px 80px"}}>
     <button onClick={onBack} style={{background:"none",border:"none",color:"var(--muted)",fontSize:13,cursor:"pointer",marginBottom:18}}>← Volver</button>
@@ -261,8 +259,7 @@ function Detail({bet,onBack,onUpdate}){
     </div>
     <div style={{marginBottom:18}}><div style={{fontSize:11,color:"var(--muted)",letterSpacing:1.4,textTransform:"uppercase",marginBottom:10}}>Resultado</div>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7}}>
-        {["win","loss","cashout","pending"].map(r=>{ const s=getS(r,r===res?pl:null); return <button key={r} onClick={()=>setRes(r)} style={{padding:"11px 10px",borderRadius:7,cursor:"pointer",border:`1px solid ${res===r?s.bd:"var(--border)"}`,background:res===r?s.bg:"var(--surface)",color:res===r?s.t:"var(--muted)",fontSize:13}}>{s.i} {s.l}</button>; })}
-      </div>
+        {["win","loss","cashout","pending"].map(r=>{const s=getS(r,r===res?pl:null);return <button key={r} onClick={()=>setRes(r)} style={{padding:"11px 10px",borderRadius:7,cursor:"pointer",border:`1px solid ${res===r?s.bd:"var(--border)"}`,background:res===r?s.bg:"var(--surface)",color:res===r?s.t:"var(--muted)",fontSize:13}}>{s.i} {s.l}</button>;})}      </div>
     </div>
     {res!=="loss"&&res!=="pending"&&(<div style={{marginBottom:18}}><div style={{fontSize:11,color:"var(--muted)",letterSpacing:1.4,textTransform:"uppercase",marginBottom:10}}>Retorno Bet365 (€)</div>
       <input type="number" step="0.01" value={ret} onChange={e=>setRet(e.target.value)} placeholder="ej: 85.15" style={{...inp,fontFamily:"'DM Mono',monospace",fontSize:18}}/>
@@ -279,7 +276,7 @@ function NewBet({onBack,onSave}){
   const [date,setDate]=useState(today),[type,setType]=useState("Combinada"),[desc,setDesc]=useState(""),[odds,setOdds]=useState(""),[stake,setStake]=useState("15"),[res,setRes]=useState("pending"),[ret,setRet]=useState(""),[notes,setNotes]=useState(""),[saved,setSaved]=useState(false);
   const pl=res==="loss"?-parseFloat(stake||15):ret!==""?parseFloat((parseFloat(ret)-parseFloat(stake||15)).toFixed(2)):null;
   const valid=desc.trim()&&odds;
-  const save=()=>{ if(!valid)return; onSave({id:"b"+Date.now(),date,type,desc,odds:parseFloat(odds),stake:parseFloat(stake||15),result:res,pl:res==="pending"?null:pl,bankroll:null,notes}); setSaved(true); setTimeout(onBack,600); };
+  const save=()=>{if(!valid)return;onSave({id:"b"+Date.now(),date,type,desc,odds:parseFloat(odds),stake:parseFloat(stake||15),result:res,pl:res==="pending"?null:pl,bankroll:null,notes});setSaved(true);setTimeout(onBack,600);};
   const inp={width:"100%",padding:"11px 13px",borderRadius:7,border:"1px solid var(--border)",background:"var(--bg3)",color:"var(--text)",fontSize:14};
   const lbl={fontSize:11,color:"var(--muted)",letterSpacing:1.4,textTransform:"uppercase",marginBottom:8,display:"block"};
   return(<div style={{flex:1,overflow:"auto",padding:"14px 18px 80px"}}>
@@ -292,7 +289,7 @@ function NewBet({onBack,onSave}){
       <div><label style={lbl}>Cuota</label><input type="number" step="0.01" value={odds} onChange={e=>setOdds(e.target.value)} placeholder="5.67" style={{...inp,fontFamily:"'DM Mono',monospace"}}/></div>
       <div><label style={lbl}>Stake €</label><input type="number" step="0.5" value={stake} onChange={e=>setStake(e.target.value)} style={{...inp,fontFamily:"'DM Mono',monospace"}}/></div>
     </div>
-    <div style={{marginBottom:15}}><label style={lbl}>Resultado</label><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7}}>{["pending","win","loss","cashout"].map(r=>{ const s=getS(r,null); return <button key={r} onClick={()=>setRes(r)} style={{padding:10,borderRadius:7,cursor:"pointer",border:`1px solid ${res===r?s.bd:"var(--border)"}`,background:res===r?s.bg:"rgba(255,255,255,0.03)",color:res===r?s.t:"var(--muted)",fontSize:13}}>{s.i} {s.l}</button>; })}</div></div>
+    <div style={{marginBottom:15}}><label style={lbl}>Resultado</label><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7}}>{["pending","win","loss","cashout"].map(r=>{const s=getS(r,null);return <button key={r} onClick={()=>setRes(r)} style={{padding:10,borderRadius:7,cursor:"pointer",border:`1px solid ${res===r?s.bd:"var(--border)"}`,background:res===r?s.bg:"rgba(255,255,255,0.03)",color:res===r?s.t:"var(--muted)",fontSize:13}}>{s.i} {s.l}</button>;})}    </div></div>
     {res!=="loss"&&res!=="pending"&&(<div style={{marginBottom:15}}><label style={lbl}>Retorno Bet365 (€)</label><input type="number" step="0.01" value={ret} onChange={e=>setRet(e.target.value)} placeholder="ej: 85.15" style={{...inp,fontFamily:"'DM Mono',monospace",fontSize:18}}/>{pl!=null&&<div style={{marginTop:6,fontSize:13,fontFamily:"'DM Mono',monospace",color:pl>=0?"#5cb85c":"#d9534f"}}>P&L: {fmtM(pl)}</div>}</div>)}
     <div style={{marginBottom:22}}><label style={lbl}>Notas</label><textarea value={notes} onChange={e=>setNotes(e.target.value)} rows={2} style={{...inp,resize:"none"}}/></div>
     <button onClick={save} disabled={!valid} style={{width:"100%",padding:13,borderRadius:9,cursor:valid?"pointer":"not-allowed",background:saved?"transparent":valid?"linear-gradient(135deg,var(--accent),var(--cyan))":"var(--bg3)",border:saved?"1px solid rgba(92,184,92,0.4)":"none",color:saved?"#5cb85c":valid?"#fff":"var(--muted)",fontSize:14,fontWeight:500}}>{saved?"✓ Guardado":"Guardar apuesta"}</button>
@@ -313,18 +310,18 @@ function App(){
     (async()=>{
       try{
         const s=await window.storage.get(STORAGE_KEY);
-        if(s&&s.value){ setBets(computeBankrolls(JSON.parse(s.value))); }
-        else{ const init=computeBankrolls(HISTORICAL); setBets(init); await window.storage.set(STORAGE_KEY,JSON.stringify(init)); }
-      }catch(e){ setBets(computeBankrolls(HISTORICAL)); }
+        if(s&&s.value){setBets(computeBankrolls(JSON.parse(s.value)));}
+        else{const init=computeBankrolls(HISTORICAL);setBets(init);await window.storage.set(STORAGE_KEY,JSON.stringify(init));}
+      }catch(e){setBets(computeBankrolls(HISTORICAL));}
       setLoaded(true);
     })();
   },[]);
-  async function persist(raw){ const wb=computeBankrolls(raw); setBets(wb); try{ await window.storage.set(STORAGE_KEY,JSON.stringify(wb)); }catch(e){} }
+  async function persist(raw){const wb=computeBankrolls(raw);setBets(wb);try{await window.storage.set(STORAGE_KEY,JSON.stringify(wb));}catch(e){}}
   const touchStart=useRef(null),[drag,setDrag]=useState(0),idx=TABS.indexOf(tab);
   const oTS=e=>{touchStart.current=e.touches[0].clientX;setDrag(0);};
   const oTM=e=>{if(touchStart.current!==null)setDrag(e.touches[0].clientX-touchStart.current);};
-  const oTE=()=>{ if(Math.abs(drag)>55){ if(drag<0&&idx<TABS.length-1)setTab(TABS[idx+1]); if(drag>0&&idx>0)setTab(TABS[idx-1]); } touchStart.current=null;setDrag(0); };
-  if(!loaded) return <div style={{height:"100%",display:"flex",alignItems:"center",justifyContent:"center",color:"var(--muted)",fontSize:13}}>Cargando...</div>;
+  const oTE=()=>{if(Math.abs(drag)>55){if(drag<0&&idx<TABS.length-1)setTab(TABS[idx+1]);if(drag>0&&idx>0)setTab(TABS[idx-1]);}touchStart.current=null;setDrag(0);};
+  if(!loaded)return <div style={{height:"100%",display:"flex",alignItems:"center",justifyContent:"center",color:"var(--muted)",fontSize:13}}>Cargando...</div>;
   const openBet=b=>{setSel(b);setView("detail");};
   return(<><style>{CSS}</style>
     <div style={{height:"100%",maxWidth:480,margin:"0 auto",background:"var(--bg)",display:"flex",flexDirection:"column",position:"relative",overflow:"hidden"}}>
@@ -338,7 +335,7 @@ function App(){
           </div>))}
         </div>
       </div>)}
-      {view==="detail"&&sel&&(<div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}><Detail bet={sel} onBack={()=>{setView("main");setSel(null);}} onUpdate={u=>{ const nb=[...bets]; nb[nb.findIndex(x=>x.id===u.id)]=u; persist(nb); }}/></div>)}
+      {view==="detail"&&sel&&(<div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}><Detail bet={sel} onBack={()=>{setView("main");setSel(null);}} onUpdate={u=>{const nb=[...bets];nb[nb.findIndex(x=>x.id===u.id)]=u;persist(nb);}}/></div>)}
       {view==="newbet"&&(<div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}><NewBet onBack={()=>setView("main")} onSave={b=>{persist([...bets,b]);setView("main");}}/></div>)}
       {view==="main"&&<TabBar active={tab} onChange={setTab}/>}
     </div></>);
@@ -348,9 +345,9 @@ window.App=App;
   <script>
     window.addEventListener('DOMContentLoaded',function(){
       ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(window.App));
-      setTimeout(function(){ var s=document.getElementById('splash'); if(s){s.style.opacity='0';setTimeout(function(){if(s.parentNode)s.parentNode.removeChild(s);},400);} },900);
+      setTimeout(function(){var s=document.getElementById('splash');if(s){s.style.opacity='0';setTimeout(function(){if(s.parentNode)s.parentNode.removeChild(s);},400);}},900);
     });
-    if('serviceWorker' in navigator){ navigator.serviceWorker.register('public/sw.js').catch(function(){}); }
+    if('serviceWorker' in navigator){navigator.serviceWorker.register('public/sw.js').catch(function(){});}
   </script>
 </body>
 </html>
