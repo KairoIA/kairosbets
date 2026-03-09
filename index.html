@@ -51,7 +51,13 @@ const HISTORICAL=[
   {id:"h11",date:"2026-03-09",type:"Combinada",desc:"West Ham Over 2.5 (1.80) × Almería gana (1.57)",odds:2.826,stake:15,result:"pending",pl:null,notes:"FA Cup QF West Ham vs Brentford | SP2 Almería vs Cultural Leonesa | EV medio +18%"},
 ];
 
-function Logo({size=36}){return <img src="public/icons/icon-192.png" width={size} height={size} style={{borderRadius:size*0.2|0,flexShrink:0,objectFit:"cover"}} alt="KairosBets"/>;}}
+function Logo({size=36}){
+  return(
+    <img src="public/icons/icon-192.png" width={size} height={size}
+      style={{borderRadius:Math.round(size*0.2),flexShrink:0,objectFit:"cover"}}
+      alt="KairosBets"/>
+  );
+}}
 
 function getS(r,pl){
   if(r==="win")return{t:"#5cb85c",bg:"rgba(92,184,92,0.07)",bd:"rgba(92,184,92,0.18)",l:"Ganada",i:"✓"};
