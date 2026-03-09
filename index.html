@@ -81,6 +81,7 @@ const HISTORICAL=[
   {id:"h8",date:"2026-03-05",type:"Combinada",desc:"Lyon gana Coupe de France (2.55) × Over 2.5 (1.72)",odds:4.00,stake:15,result:"loss",pl:-15.00,notes:""},
   {id:"h9",date:"2026-03-06",type:"Combinada",desc:"Elversberg gana (1.83) × Bayern HT Local (1.44) × Nancy DC X2 (1.44)",odds:3.80,stake:15,result:"cashout",pl:38.22,notes:"Cash out anticipado."},
   {id:"h10",date:"2026-03-07",type:"Combinada",desc:"Nantes U2.5 (1.61) × Man City gana FA Cup (2.05) × Swansea U2.5 (1.72)",odds:5.677,stake:15,result:"win",pl:70.15,notes:"Nantes 0-1 ✅ | Man City 3-1 ✅ | Swansea 2-0 ✅"},
+  {id:"h11",date:"2026-03-09",type:"Combinada",desc:"West Ham Over 2.5 (1.80) × Almería gana (1.57)",odds:2.826,stake:15,result:"pending",pl:null,notes:"FA Cup QF West Ham vs Brentford | SP2 Almería vs Cultural Leonesa | EV medio +18%"},
 ];
 
 function Logo({size=36}){
@@ -296,8 +297,7 @@ function History({bets,onBet}){
       </div>
     </div>{i<sorted.length-1&&<Sep/>}</div>);})}
     <div style={{height:80}}/>
-  </div>);
-}
+  </div>);}
 function Detail({bet,onBack,onUpdate}){
   const [res,setRes]=useState(bet.result),[ret,setRet]=useState(bet.result!=="pending"&&bet.pl!=null?(bet.stake+bet.pl).toFixed(2):""),[notes,setNotes]=useState(bet.notes||""),[saved,setSaved]=useState(false);
   const pl=res==="loss"?-bet.stake:ret!==""?parseFloat((parseFloat(ret)-bet.stake).toFixed(2)):null;
@@ -312,7 +312,8 @@ function Detail({bet,onBack,onUpdate}){
     </div>
     <div style={{marginBottom:18}}><div style={{fontSize:11,color:"var(--muted)",letterSpacing:1.4,textTransform:"uppercase",marginBottom:10}}>Resultado</div>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7}}>
-        {["win","loss","cashout","pending"].map(r=>{const s=getS(r,r===res?pl:null);return <button key={r} onClick={()=>setRes(r)} style={{padding:"11px 10px",borderRadius:7,cursor:"pointer",border:`1px solid ${res===r?s.bd:"var(--border)"}`,background:res===r?s.bg:"var(--surface)",color:res===r?s.t:"var(--muted)",fontSize:13}}>{s.i} {s.l}</button>;})}      </div>
+        {["win","loss","cashout","pending"].map(r=>{const s=getS(r,r===res?pl:null);return <button key={r} onClick={()=>setRes(r)} style={{padding:"11px 10px",borderRadius:7,cursor:"pointer",border:`1px solid ${res===r?s.bd:"var(--border)"}`,background:res===r?s.bg:"var(--surface)",color:res===r?s.t:"var(--muted)",fontSize:13}}>{s.i} {s.l}</button>;})}
+      </div>
     </div>
     {res!=="loss"&&res!=="pending"&&(<div style={{marginBottom:18}}><div style={{fontSize:11,color:"var(--muted)",letterSpacing:1.4,textTransform:"uppercase",marginBottom:10}}>Retorno Bet365 (€)</div>
       <input type="number" step="0.01" value={ret} onChange={e=>setRet(e.target.value)} placeholder="ej: 85.15" style={{...inp,fontFamily:"'DM Mono',monospace",fontSize:18}}/>
@@ -322,8 +323,7 @@ function Detail({bet,onBack,onUpdate}){
       <textarea value={notes} onChange={e=>setNotes(e.target.value)} rows={3} style={{...inp,resize:"none",lineHeight:1.5}}/>
     </div>
     <button onClick={save} style={{width:"100%",padding:13,borderRadius:9,cursor:"pointer",background:saved?"transparent":"linear-gradient(135deg,var(--accent),var(--cyan))",border:saved?"1px solid rgba(92,184,92,0.4)":"none",color:saved?"#5cb85c":"#fff",fontSize:14,fontWeight:500}}>{saved?"✓ Guardado":"Guardar"}</button>
-  </div>);
-}
+  </div>);}
 function NewBet({onBack,onSave}){
   const today=new Date().toISOString().split("T")[0];
   const [date,setDate]=useState(today),[type,setType]=useState("Combinada"),[desc,setDesc]=useState(""),[odds,setOdds]=useState(""),[stake,setStake]=useState("15"),[res,setRes]=useState("pending"),[ret,setRet]=useState(""),[notes,setNotes]=useState(""),[saved,setSaved]=useState(false);
@@ -346,16 +346,14 @@ function NewBet({onBack,onSave}){
     {res!=="loss"&&res!=="pending"&&(<div style={{marginBottom:15}}><label style={lbl}>Retorno Bet365 (€)</label><input type="number" step="0.01" value={ret} onChange={e=>setRet(e.target.value)} placeholder="ej: 85.15" style={{...inp,fontFamily:"'DM Mono',monospace",fontSize:18}}/>{pl!=null&&<div style={{marginTop:6,fontSize:13,fontFamily:"'DM Mono',monospace",color:pl>=0?"#5cb85c":"#d9534f"}}>P&L: {fmtM(pl)}</div>}</div>)}
     <div style={{marginBottom:22}}><label style={lbl}>Notas</label><textarea value={notes} onChange={e=>setNotes(e.target.value)} rows={2} style={{...inp,resize:"none"}}/></div>
     <button onClick={save} disabled={!valid} style={{width:"100%",padding:13,borderRadius:9,cursor:valid?"pointer":"not-allowed",background:saved?"transparent":valid?"linear-gradient(135deg,var(--accent),var(--cyan))":"var(--bg3)",border:saved?"1px solid rgba(92,184,92,0.4)":"none",color:saved?"#5cb85c":valid?"#fff":"var(--muted)",fontSize:14,fontWeight:500}}>{saved?"✓ Guardado":"Guardar apuesta"}</button>
-  </div>);
-}
+  </div>);}
 function TabBar({active,onChange}){
   const tabs=[{id:"dashboard",label:"Inicio",icon:"◆"},{id:"chart",label:"Gráfica",icon:"∿"},{id:"history",label:"Historial",icon:"≡"}];
   return(<div style={{position:"absolute",bottom:0,left:0,right:0,height:58,background:"rgba(12,14,24,0.97)",backdropFilter:"blur(10px)",borderTop:"1px solid var(--border)",display:"flex"}}>
     {tabs.map(t=>(<button key={t.id} onClick={()=>onChange(t.id)} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:3,background:"none",border:"none",cursor:"pointer",color:active===t.id?"var(--cyan2)":"var(--muted)",transition:"color 0.15s"}}>
       <span style={{fontSize:16}}>{t.icon}</span><span style={{fontSize:10,letterSpacing:0.5,textTransform:"uppercase",fontWeight:active===t.id?500:400}}>{t.label}</span>
     </button>))}
-  </div>);
-}
+  </div>);}
 const TABS=["dashboard","chart","history"];
 function App(){
   const [bets,setBets]=useState([]),[loaded,setLoaded]=useState(false),[tab,setTab]=useState("dashboard"),[view,setView]=useState("main"),[sel,setSel]=useState(null);
