@@ -36,11 +36,9 @@
 const{useState,useEffect,useRef,useCallback}=React;
 
 // === Google Gemini AI Service ===
-const GEMINI_KEY="AIzaSyAPOQEjvFp13cI89XvoQ2N3uRAEnh2_h-c";
 const GEMINI_MODEL="gemini-2.5-flash";
-const GEMINI_URL=`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_KEY}`;
 const AI_KEY_STORE="kairosbets_gemini_key";
-const getAK=()=>localStorage.getItem(AI_KEY_STORE)||GEMINI_KEY;
+const getAK=()=>localStorage.getItem(AI_KEY_STORE)||"";
 const setAK=k=>localStorage.setItem(AI_KEY_STORE,k.trim());
 const hasAK=()=>!!getAK();
 
