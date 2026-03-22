@@ -35,19 +35,25 @@
   <script type="text/babel" data-presets="react">
 const{useState,useEffect,useRef,useCallback}=React;
 
-// === Google Gemini AI Service ===
+// === DeepSeek (texto) + Gemini (vision) ===
+const DS_KEY="sk-e5e32b90703245cc904f5d5ccff47ea1";
 const GEMINI_MODEL="gemini-2.5-flash";
 const AI_KEY_STORE="kairosbets_gemini_key";
-const getAK=()=>localStorage.getItem(AI_KEY_STORE)||"";
-const setAK=k=>localStorage.setItem(AI_KEY_STORE,k.trim());
-const hasAK=()=>!!getAK();
+var getGeminiKey=function(){return localStorage.getItem(AI_KEY_STORE)||"";};
+var setAK=function(k){localStorage.setItem(AI_KEY_STORE,k.trim());};
+var hasAK=function(){return !!(DS_KEY&&getGeminiKey());};
 
-async function callAI(messages,opts){
-  var o=opts||{};var temp=o.temperature||0.3;var jm=o.jsonMode||false;
-  var key=getAK();if(!key)throw new Error("API key de Gemini no configurada");
+async function callDeepSeek(messages,opts){
+  var o=opts||{};var temp=o.temperature||0.3;
+  var res=await fetch("https://api.deepseek.com/v1/chat/completions",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+DS_KEY},body:JSON.stringify({model:"deepseek-chat",messages:messages,temperature:temp,max_tokens:4096})});
+  if(!res.ok){var err=await res.text();throw new Error("DeepSeek error "+res.status+": "+err);}
+  var data=await res.json();
+  return data.choices[0].message.content;
+}
+async function callGeminiVision(base64,mimeType,prompt){
+  var key=getGeminiKey();if(!key)throw new Error("API key de Gemini no configurada. Ve a IA → ⚙ API");
   var url="https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
-  var body={model:GEMINI_MODEL,messages:messages,temperature:temp,max_tokens:8192};
-  if(jm)body.response_format={type:"json_object"};
+  var body={model:GEMINI_MODEL,messages:[{role:"user",content:[{type:"image_url",image_url:{url:"data:"+mimeType+";base64,"+base64}},{type:"text",text:prompt}]}],temperature:0.1,max_tokens:4096,response_format:{type:"json_object"}};
   var res=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+key},body:JSON.stringify(body)});
   if(!res.ok){var err=await res.text();throw new Error("Gemini error "+res.status+": "+err);}
   var data=await res.json();
@@ -110,7 +116,7 @@ ${BET_FORMAT_PROMPT}
 Devuelve SOLO JSON válido, sin explicaciones ni markdown:
 {"type":"Simple" o "Combinada","desc":"...","odds":numero_2_decimales,"stake":numero,"date":"YYYY-MM-DD","notes":""}`;
 
-  const content=await callAI([{role:"user",content:[{type:"image_url",image_url:{url:"data:"+mime+";base64,"+b64}},{type:"text",text:prompt}]}],{temperature:0.1,jsonMode:true});
+  const content=await callGeminiVision(b64,mime,prompt);
   try{return safeParseJSON(content);}catch{throw new Error("No se pudo parsear: "+content);}
 }
 
@@ -126,7 +132,7 @@ Si no dice stake, pon 15. Si no dice fecha, usa "${today}".
 
 Devuelve SOLO JSON válido:
 {"type":"Simple" o "Combinada","desc":"...","odds":numero_2_decimales,"stake":numero,"date":"YYYY-MM-DD","notes":""}`;
-  const content=await callAI([{role:"user",content:prompt}],{jsonMode:true});
+  const content=await callDeepSeek([{role:"user",content:prompt}]);
   try{return safeParseJSON(content);}catch{throw new Error("No se pudo parsear: "+content);}
 }
 
@@ -137,7 +143,7 @@ Historial: ${JSON.stringify(settled)}
 Devuelve SOLO JSON válido:
 {"resumen":"2-3 frases","stats":{"totalBets":N,"wins":N,"losses":N,"cashouts":N,"winRate":"X%","roi":"X%","totalPL":N,"avgOdds":N},"mejoresMercados":[{"mercado":"nombre","record":"W-L","pl":N,"nota":"breve"}],"peoresMercados":[{"mercado":"nombre","record":"W-L","pl":N,"nota":"breve"}],"diasSemana":[{"dia":"nombre","bets":N,"wins":N,"pl":N}],"ligas":[{"liga":"nombre","bets":N,"wins":N,"pl":N}],"rachas":"descripción","insights":["1","2","3"],"recomendaciones":["1","2","3"]}
 Sé específico. Identifica ligas por nombres de equipos.`;
-  const content=await callAI([{role:"user",content:prompt}],{temperature:0.4,jsonMode:true});
+  const content=await callDeepSeek([{role:"user",content:prompt}],{temperature:0.4});
   try{return safeParseJSON(content);}catch{throw new Error("No se pudo parsear análisis: "+content);}
 }
 
@@ -153,7 +159,7 @@ Semana: ${JSON.stringify(ws)}
 Historial: ${JSON.stringify(all)}
 Devuelve SOLO JSON válido:
 {"titular":"máx 50 chars","subtitulo":"balance breve","cronica":"2 párrafos cortos máximo 300 chars total, resumen conciso","balance":{"apuestas":N,"ganadas":N,"perdidas":N,"cashouts":N,"pl":N,"roi":"X%"},"mejorApuesta":"1 frase corta","peorApuesta":"1 frase corta","leccion":"1 frase","perspectiva":"1 frase"}`;
-  const content=await callAI([{role:"user",content:prompt}],{temperature:0.6,jsonMode:true});
+  const content=await callDeepSeek([{role:"user",content:prompt}],{temperature:0.6});
   try{return safeParseJSON(content);}catch{throw new Error("No se pudo generar reporte: "+content);}
 }
 
@@ -400,8 +406,8 @@ function NewBet({onBack,onSave}){
   const valid=desc.trim()&&odds;
   const applyAI=d=>{if(d.type)setType(d.type);if(d.desc)setDesc(d.desc);if(d.odds)setOdds(String(d.odds));if(d.stake)setStake(String(d.stake));if(d.date)setDate(d.date);if(d.notes)setNotes(d.notes);setRes("pending");setMode("manual");};
   const [aiStatus,setAiStatus]=useState("");
-  const handlePhoto=async e=>{const f=e.target.files?.[0];if(!f)return;if(!hasAK()){setAiErr("Configura tu API key en la pestaña IA → ⚙");return;}setAiLoad(true);setAiErr(null);setAiStatus("Preparando...");try{applyAI(await parseBetScreenshot(f,s=>setAiStatus(s)));}catch(e){setAiErr(e.message);}setAiLoad(false);setAiStatus("");if(fileRef.current)fileRef.current.value="";};
-  const handleText=async()=>{if(!aiTxt.trim())return;if(!hasAK()){setAiErr("Configura tu API key en la pestaña IA → ⚙");return;}setAiLoad(true);setAiErr(null);try{applyAI(await parseBetText(aiTxt));setAiTxt("");}catch(e){setAiErr(e.message);}setAiLoad(false);};
+  const handlePhoto=async e=>{const f=e.target.files?.[0];if(!f)return;if(!getGeminiKey()){setAiErr("Configura tu API key de Gemini en la pestaña IA → ⚙");return;}setAiLoad(true);setAiErr(null);setAiStatus("Preparando...");try{applyAI(await parseBetScreenshot(f,s=>setAiStatus(s)));}catch(e){setAiErr(e.message);}setAiLoad(false);setAiStatus("");if(fileRef.current)fileRef.current.value="";};
+  const handleText=async()=>{if(!aiTxt.trim())return;setAiLoad(true);setAiErr(null);try{applyAI(await parseBetText(aiTxt));setAiTxt("");}catch(e){setAiErr(e.message);}setAiLoad(false);};
   const save=()=>{if(!valid)return;onSave({id:"b"+Date.now(),date,type,desc,odds:parseFloat(odds),stake:parseFloat(stake||15),result:res,pl:res==="pending"?null:pl,bankroll:null,notes});setSaved(true);setTimeout(onBack,600);};
   const inp={width:"100%",padding:"11px 13px",borderRadius:7,border:"1px solid var(--border)",background:"var(--bg3)",color:"var(--text)",fontSize:14};
   const lbl={fontSize:11,color:"var(--muted)",letterSpacing:1.4,textTransform:"uppercase",marginBottom:8,display:"block"};
@@ -438,25 +444,32 @@ function NewBet({onBack,onSave}){
   </div>);}
 // === Settings Screen ===
 function SettingsView({onBack}){
-  const [key,setKey]=useState(getAK()),[saved,setSaved]=useState(false),[vis,setVis]=useState(false);
+  const [key,setKey]=useState(getGeminiKey()),[saved,setSaved]=useState(false),[vis,setVis]=useState(false);
   const doSave=()=>{setAK(key);setSaved(true);setTimeout(()=>setSaved(false),1500);};
   const inp={width:"100%",padding:"12px 13px",borderRadius:8,border:"1px solid var(--border)",background:"var(--bg3)",color:"var(--text)",fontSize:13,fontFamily:"'DM Mono',monospace"};
   return(<div style={{flex:1,overflow:"auto",padding:"14px 18px 80px"}}>
     <button onClick={onBack} style={{background:"none",border:"none",color:"var(--muted)",fontSize:13,cursor:"pointer",marginBottom:18,display:"flex",alignItems:"center",gap:5}}>← Volver</button>
     <div style={{fontSize:17,fontWeight:600,marginBottom:6}}>Configuración IA</div>
-    <div style={{fontSize:12,color:"var(--muted)",marginBottom:24,lineHeight:1.5}}>Gestiona tu conexión con Google Gemini.</div>
-    <div style={{padding:"16px 14px",background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:10,marginBottom:20}}>
-      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:16}}>
-        <div style={{width:8,height:8,borderRadius:"50%",background:hasAK()?"#5cb85c":"#d9534f",flexShrink:0}}/>
-        <span style={{fontSize:13,color:hasAK()?"#5cb85c":"var(--muted)"}}>{hasAK()?"IA conectada":"IA no configurada"}</span>
+    <div style={{fontSize:12,color:"var(--muted)",marginBottom:20,lineHeight:1.5}}>DeepSeek para análisis y reportes. Gemini para capturas.</div>
+    <div style={{padding:"14px",background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:10,marginBottom:14}}>
+      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
+        <div style={{width:8,height:8,borderRadius:"50%",background:"#5cb85c",flexShrink:0}}/>
+        <span style={{fontSize:13,color:"#5cb85c"}}>DeepSeek conectado</span>
       </div>
-      <div style={{fontSize:11,color:"var(--muted)",letterSpacing:1.4,textTransform:"uppercase",marginBottom:8}}>API Key de Google Gemini</div>
-      <div style={{position:"relative"}}><input type={vis?"text":"password"} value={key} onChange={e=>setKey(e.target.value)} placeholder="sk-..." style={inp}/>
+      <div style={{fontSize:11,color:"var(--muted)",lineHeight:1.5}}>Análisis, reporte semanal y texto IA. Key integrada.</div>
+    </div>
+    <div style={{padding:"16px 14px",background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:10,marginBottom:20}}>
+      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
+        <div style={{width:8,height:8,borderRadius:"50%",background:getGeminiKey()?"#5cb85c":"#d9534f",flexShrink:0}}/>
+        <span style={{fontSize:13,color:getGeminiKey()?"#5cb85c":"var(--muted)"}}>{getGeminiKey()?"Gemini conectado":"Gemini no configurado"}</span>
+      </div>
+      <div style={{fontSize:11,color:"var(--muted)",letterSpacing:1.4,textTransform:"uppercase",marginBottom:8}}>API Key de Gemini (para capturas)</div>
+      <div style={{position:"relative"}}><input type={vis?"text":"password"} value={key} onChange={e=>setKey(e.target.value)} placeholder="AIza..." style={inp}/>
         <button onClick={()=>setVis(!vis)} style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",color:"var(--muted)",fontSize:11,cursor:"pointer",padding:"4px 6px",letterSpacing:0.3}}>{vis?"OCULTAR":"VER"}</button>
       </div>
-      <div style={{fontSize:11,color:"var(--muted)",marginTop:10,lineHeight:1.5}}>Se guarda solo en este dispositivo. No se comparte con nadie.</div>
+      <div style={{fontSize:11,color:"var(--muted)",marginTop:10,lineHeight:1.5}}>Solo para capturas de apuestas. Se guarda en este dispositivo.</div>
     </div>
-    <button onClick={doSave} style={{width:"100%",padding:13,borderRadius:9,background:saved?"transparent":"linear-gradient(135deg,var(--accent),var(--cyan))",border:saved?"1px solid rgba(92,184,92,0.4)":"none",color:saved?"#5cb85c":"#fff",fontSize:14,fontWeight:500,cursor:"pointer"}}>{saved?"✓ Guardada":"Guardar API Key"}</button>
+    <button onClick={doSave} style={{width:"100%",padding:13,borderRadius:9,background:saved?"transparent":"linear-gradient(135deg,var(--accent),var(--cyan))",border:saved?"1px solid rgba(92,184,92,0.4)":"none",color:saved?"#5cb85c":"#fff",fontSize:14,fontWeight:500,cursor:"pointer"}}>{saved?"✓ Guardada":"Guardar"}</button>
   </div>);}
 
 // === AI Analysis Tab ===
@@ -580,7 +593,7 @@ function AITab({bets,onSettings}){
   const [aiMode,setAiMode]=useState("analysis"),[loading,setLoading]=useState(false),[error,setError]=useState(null),[aData,setAData]=useState(null),[wData,setWData]=useState(null);
   const settled=bets.filter(b=>b.result!=="pending");
   const run=async(type)=>{
-    if(!hasAK()){setError("Configura tu API key de Gemini primero");return;}
+    if(!DS_KEY){setError("DeepSeek no configurado");return;}
     setLoading(true);setError(null);
     try{if(type==="analysis")setAData(await aiAnalyze(bets));else setWData(await aiWeekly(bets));}catch(e){setError(e.message);}
     setLoading(false);
