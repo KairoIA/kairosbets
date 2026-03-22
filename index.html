@@ -12,7 +12,7 @@
   <title>KairosBets</title>
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
-    html,body,#root{height:100dvh;background:#0c0e18;overflow:hidden}
+    html,body,#root{height:100dvh;background:#0c0e18;overflow:hidden;overscroll-behavior:none;position:fixed;width:100%;touch-action:pan-y}
     #splash{position:fixed;inset:0;background:#0a0d1a;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;z-index:9999;transition:opacity 0.5s}
     #splash p{color:rgba(74,180,220,0.5);font-size:11px;letter-spacing:3px;text-transform:uppercase;font-family:sans-serif}
   </style>
@@ -348,8 +348,9 @@ function Detail({bet,onBack,onUpdate,onDelete}){
     <div style={{marginBottom:22}}><div style={{fontSize:11,color:"var(--muted)",letterSpacing:1.4,textTransform:"uppercase",marginBottom:10}}>Notas</div>
       <textarea value={notes} onChange={e=>setNotes(e.target.value)} rows={3} style={{...inp,resize:"none",lineHeight:1.5}}/>
     </div>
-    <button onClick={save} style={{width:"100%",padding:13,borderRadius:9,cursor:"pointer",background:saved?"transparent":"linear-gradient(135deg,var(--accent),var(--cyan))",border:saved?"1px solid rgba(92,184,92,0.4)":"none",color:saved?"#5cb85c":"#fff",fontSize:14,fontWeight:500,marginBottom:12}}>{saved?"✓ Guardado":"Guardar"}</button>
-    {bet.result==="pending"&&<button onClick={doDelete} style={{width:"100%",padding:12,borderRadius:9,cursor:"pointer",background:confirmDel?"rgba(217,83,79,0.12)":"transparent",border:"1px solid rgba(217,83,79,0.3)",color:"#d9534f",fontSize:13,fontWeight:500}}>{confirmDel?"Pulsa de nuevo para confirmar":"Cancelar apuesta"}</button>}
+    <button onClick={save} style={{width:"100%",padding:13,borderRadius:9,cursor:"pointer",background:saved?"transparent":"linear-gradient(135deg,var(--accent),var(--cyan))",border:saved?"1px solid rgba(92,184,92,0.4)":"none",color:saved?"#5cb85c":"#fff",fontSize:14,fontWeight:500}}>{saved?"✓ Guardado":"Guardar"}</button>
+    {bet.result==="pending"&&<button onClick={doDelete} style={{width:"100%",padding:12,borderRadius:9,cursor:"pointer",background:confirmDel?"rgba(217,83,79,0.12)":"transparent",border:"1px solid rgba(217,83,79,0.3)",color:"#d9534f",fontSize:13,fontWeight:500,marginTop:12}}>{confirmDel?"Pulsa de nuevo para confirmar":"Cancelar apuesta"}</button>}
+    <div style={{height:40}}/>
   </div>);}
 function NewBet({onBack,onSave}){
   const today=new Date().toISOString().split("T")[0];
