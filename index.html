@@ -47,7 +47,7 @@ async function callGemini(parts,{temperature=0.3,jsonMode=false}={}){
   const url=`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${key}`;
   const genCfg={temperature,maxOutputTokens:8192};
   if(jsonMode)genCfg.responseMimeType="application/json";
-  const body={contents:[{parts}],generationConfig:genCfg,thinkingConfig:{thinkingBudget:0}};
+  const body={contents:[{parts}],generationConfig:genCfg};
   const res=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
   if(!res.ok){const err=await res.text();throw new Error(`Gemini error ${res.status}: ${err}`);}
   const data=await res.json();
@@ -158,7 +158,7 @@ async function aiWeekly(bets){
 Semana: ${JSON.stringify(ws)}
 Historial: ${JSON.stringify(all)}
 Devuelve SOLO JSON válido:
-{"titular":"máx 60 chars estilo prensa","subtitulo":"balance semana","cronica":"3-5 párrafos contando cada apuesta, partidos, resultados, sorpresas","balance":{"apuestas":N,"ganadas":N,"perdidas":N,"cashouts":N,"pl":N,"roi":"X%"},"mejorApuesta":"cuál y por qué","peorApuesta":"cuál y por qué","leccion":"qué mejorar","perspectiva":"tendencia y ajustes"}`;
+{"titular":"máx 50 chars","subtitulo":"balance breve","cronica":"2 párrafos cortos máximo 300 chars total, resumen conciso","balance":{"apuestas":N,"ganadas":N,"perdidas":N,"cashouts":N,"pl":N,"roi":"X%"},"mejorApuesta":"1 frase corta","peorApuesta":"1 frase corta","leccion":"1 frase","perspectiva":"1 frase"}`;
   const content=await callGemini([{text:prompt}],{temperature:0.6,jsonMode:true});
   try{return safeParseJSON(content);}catch{throw new Error("No se pudo generar reporte: "+content);}
 }
