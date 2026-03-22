@@ -42,17 +42,20 @@ const getAK=()=>localStorage.getItem(AI_KEY_STORE)||"";
 const setAK=k=>localStorage.setItem(AI_KEY_STORE,k.trim());
 const hasAK=()=>!!getAK();
 
-async function callGemini(parts,{temperature=0.3}={}){
+async function callGemini(parts,{temperature=0.3,jsonMode=false}={}){
   const key=getAK();if(!key)throw new Error("API key de Gemini no configurada");
   const url=`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${key}`;
+  const genCfg={temperature,maxOutputTokens:4096};
+  if(jsonMode)genCfg.responseMimeType="application/json";
   const res=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({contents:[{parts}],generationConfig:{temperature,maxOutputTokens:4096}})});
+    body:JSON.stringify({contents:[{parts}],generationConfig:genCfg})});
   if(!res.ok){const err=await res.text();throw new Error(`Gemini error ${res.status}: ${err}`);}
   const data=await res.json();
-  return data.candidates[0].content.parts[0].text;
+  const txt=data.candidates[0].content.parts.filter(p=>p.text).map(p=>p.text).join("");
+  return txt;
 }
 function fileToB64(file){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(",")[1]);r.onerror=rej;r.readAsDataURL(file);})}
-function cleanJSON(s){return s.replace(/```json\n?/g,"").replace(/```\n?/g,"").trim();}
+function cleanJSON(s){s=s.replace(/```json\n?/g,"").replace(/```\n?/g,"").trim();const m=s.match(/\{[\s\S]*\}/);return m?m[0]:s;}
 
 const BET_FORMAT_PROMPT=`FORMATO OBLIGATORIO para "desc" — sigue EXACTAMENTE este patrón:
 - Separar patas con " × "
@@ -89,7 +92,7 @@ Devuelve SOLO JSON válido, sin explicaciones ni markdown:
   const content=await callGemini([
     {inline_data:{mime_type:mime,data:b64}},
     {text:prompt}
-  ],{temperature:0.1});
+  ],{temperature:0.1,jsonMode:true});
   try{return JSON.parse(cleanJSON(content));}catch{throw new Error("No se pudo parsear: "+content);}
 }
 
@@ -105,7 +108,7 @@ Si no dice stake, pon 15. Si no dice fecha, usa "${today}".
 
 Devuelve SOLO JSON válido:
 {"type":"Simple" o "Combinada","desc":"...","odds":numero_2_decimales,"stake":numero,"date":"YYYY-MM-DD","notes":""}`;
-  const content=await callGemini([{text:prompt}]);
+  const content=await callGemini([{text:prompt}],{jsonMode:true});
   try{return JSON.parse(cleanJSON(content));}catch{throw new Error("No se pudo parsear: "+content);}
 }
 
@@ -116,7 +119,7 @@ Historial: ${JSON.stringify(settled)}
 Devuelve SOLO JSON válido:
 {"resumen":"2-3 frases","stats":{"totalBets":N,"wins":N,"losses":N,"cashouts":N,"winRate":"X%","roi":"X%","totalPL":N,"avgOdds":N},"mejoresMercados":[{"mercado":"nombre","record":"W-L","pl":N,"nota":"breve"}],"peoresMercados":[{"mercado":"nombre","record":"W-L","pl":N,"nota":"breve"}],"diasSemana":[{"dia":"nombre","bets":N,"wins":N,"pl":N}],"ligas":[{"liga":"nombre","bets":N,"wins":N,"pl":N}],"rachas":"descripción","insights":["1","2","3"],"recomendaciones":["1","2","3"]}
 Sé específico. Identifica ligas por nombres de equipos.`;
-  const content=await callGemini([{text:prompt}],{temperature:0.4});
+  const content=await callGemini([{text:prompt}],{temperature:0.4,jsonMode:true});
   try{return JSON.parse(cleanJSON(content));}catch{throw new Error("No se pudo parsear análisis: "+content);}
 }
 
@@ -132,7 +135,7 @@ Semana: ${JSON.stringify(ws)}
 Historial: ${JSON.stringify(all)}
 Devuelve SOLO JSON válido:
 {"titular":"máx 60 chars estilo prensa","subtitulo":"balance semana","cronica":"3-5 párrafos contando cada apuesta, partidos, resultados, sorpresas","balance":{"apuestas":N,"ganadas":N,"perdidas":N,"cashouts":N,"pl":N,"roi":"X%"},"mejorApuesta":"cuál y por qué","peorApuesta":"cuál y por qué","leccion":"qué mejorar","perspectiva":"tendencia y ajustes"}`;
-  const content=await callGemini([{text:prompt}],{temperature:0.6});
+  const content=await callGemini([{text:prompt}],{temperature:0.6,jsonMode:true});
   try{return JSON.parse(cleanJSON(content));}catch{throw new Error("No se pudo generar reporte: "+content);}
 }
 
