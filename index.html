@@ -26,7 +26,6 @@
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
   <script>
     window.storage={
       get:async function(k){try{var v=localStorage.getItem(k);return v?{value:v}:null;}catch(e){return null;}},
@@ -36,65 +35,63 @@
   <script type="text/babel" data-presets="react">
 const{useState,useEffect,useRef,useCallback}=React;
 
-// === DeepSeek AI Service ===
-const DS_API="https://api.deepseek.com/v1/chat/completions";
-const DS_MODEL="deepseek-chat";
-const DS_KEY_STORE="kairosbets_ds_key";
-const DS_DEFAULT_KEY="sk-e5e32b90703245cc904f5d5ccff47ea1";
-const getAK=()=>localStorage.getItem(DS_KEY_STORE)||DS_DEFAULT_KEY;
-const setAK=k=>localStorage.setItem(DS_KEY_STORE,k.trim());
+// === Google Gemini AI Service ===
+const GEMINI_KEY="AIzaSyAPOQEjvFp13cI89XvoQ2N3uRAEnh2_h-c";
+const GEMINI_MODEL="gemini-2.0-flash";
+const GEMINI_URL=`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_KEY}`;
+const AI_KEY_STORE="kairosbets_gemini_key";
+const getAK=()=>localStorage.getItem(AI_KEY_STORE)||GEMINI_KEY;
+const setAK=k=>localStorage.setItem(AI_KEY_STORE,k.trim());
 const hasAK=()=>!!getAK();
 
-async function callDS(messages,{maxTokens=2048,temperature=0.3}={}){
-  const key=getAK();if(!key)throw new Error("API key de DeepSeek no configurada");
-  const res=await fetch(DS_API,{method:"POST",headers:{"Content-Type":"application/json",Authorization:`Bearer ${key}`},
-    body:JSON.stringify({model:DS_MODEL,messages,max_tokens:maxTokens,temperature})});
-  if(!res.ok){const err=await res.text();throw new Error(`DeepSeek error ${res.status}: ${err}`);}
-  return(await res.json()).choices[0].message.content;
+async function callGemini(parts,{temperature=0.3}={}){
+  const key=getAK();if(!key)throw new Error("API key de Gemini no configurada");
+  const url=`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${key}`;
+  const res=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({contents:[{parts}],generationConfig:{temperature,maxOutputTokens:4096}})});
+  if(!res.ok){const err=await res.text();throw new Error(`Gemini error ${res.status}: ${err}`);}
+  const data=await res.json();
+  return data.candidates[0].content.parts[0].text;
 }
 function fileToB64(file){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(",")[1]);r.onerror=rej;r.readAsDataURL(file);})}
 function cleanJSON(s){return s.replace(/```json\n?/g,"").replace(/```\n?/g,"").trim();}
 
-async function parseBetScreenshot(file,onStatus){
-  onStatus&&onStatus("Extrayendo texto de la imagen...");
-  const worker=await Tesseract.createWorker("spa+eng",1,{});
-  await worker.setParameters({"tessedit_pageseg_mode":"6"});
-  const{data:{text}}=await worker.recognize(file);
-  await worker.terminate();
-  if(!text||text.trim().length<10)throw new Error("No se pudo leer texto de la imagen. Prueba con una captura más clara.");
-  onStatus&&onStatus("Analizando con IA...");
-  const today=new Date().toISOString().split("T")[0];
-  const prompt=`Eres un experto en apuestas deportivas. Analiza este texto extraído por OCR de una captura de Bet365 u otra casa de apuestas. El OCR puede tener errores de caracteres, números mal leídos o palabras cortadas. Usa tu conocimiento de equipos, ligas y mercados para corregir e interpretar.
-
-TEXTO OCR:
-"""
-${text}
-"""
-
-INSTRUCCIONES CRÍTICAS:
-1. Identifica TODAS las selecciones/patas. Cada pata tiene: un partido (2 equipos), un mercado (resultado, goles, etc) y una cuota decimal (ej: 1.55, 2.30). NO te dejes ninguna pata. Repasa el texto entero.
-2. Las cuotas SIEMPRE tienen exactamente 2 decimales (ej: 1.50, no 1.5). Si el OCR lee algo raro como "I.61" o "l.44", interpreta como 1.61 o 1.44.
-3. CUOTA TOTAL = multiplicación de TODAS las cuotas individuales, redondeada a 2 decimales.
-4. STAKE: busca importe apostado. Si no lo encuentras, pon 15.
-5. FECHA: busca fechas. Si no hay, usa "${today}".
-
-FORMATO DE SALIDA - desc debe seguir EXACTAMENTE este patrón:
+const BET_FORMAT_PROMPT=`FORMATO OBLIGATORIO para "desc" — sigue EXACTAMENTE este patrón:
 - Separar patas con " × "
-- Cada pata: "Equipo/Evento mercado (cuota)"
+- Cada pata: "Equipo mercado (cuota)"
 - Mercados: "gana", "pierde", "empate", "DC X2", "DC 1X", "Over 2.5", "U2.5", "O2.5", "BTTS", "HT Local", "+3.5", etc.
+- Cuotas SIEMPRE con exactamente 2 decimales (1.50, no 1.5)
+- CUOTA TOTAL ("odds") = multiplicación de TODAS las cuotas individuales, redondeada a 2 decimales
 
 EJEMPLOS de desc correctas:
 - "Burton gana (3.20) × Bradford empate (3.50) × Inter empate descanso (3.20)"
 - "Liverpool BTTS (1.61) × Barcelona +3.5 (1.66) × Man City gana (1.66)"
 - "Nantes U2.5 (1.61) × Man City gana FA Cup (2.05) × Swansea U2.5 (1.72)"
 - "Arsenal gana Chelsea (1.55) × Over 2.5 Girona/Celta (1.90)"
-- "Monaco DC X2 vs PSG"
-- "Wrexham O2.5 (1.80) × Stoke U2.5 (1.90) × Sheffield U2.5 (1.80)"
+- "Wrexham O2.5 (1.80) × Stoke U2.5 (1.90) × Sheffield U2.5 (1.80)"`;
 
-Devuelve SOLO JSON válido:
+async function parseBetScreenshot(file,onStatus){
+  onStatus&&onStatus("Analizando imagen con IA...");
+  const b64=await fileToB64(file);
+  const mime=file.type||"image/jpeg";
+  const today=new Date().toISOString().split("T")[0];
+  const prompt=`Mira esta captura de pantalla de una apuesta deportiva (Bet365, Betfair, etc).
+
+INSTRUCCIONES CRÍTICAS:
+1. Identifica TODAS las selecciones/patas de la apuesta. NO te dejes ninguna. Mira la imagen entera.
+2. Cada pata tiene: un partido, un mercado y una cuota decimal.
+3. STAKE: busca el importe apostado. Si no lo ves, pon 15.
+4. FECHA: busca fechas de los partidos. Si no hay, usa "${today}".
+
+${BET_FORMAT_PROMPT}
+
+Devuelve SOLO JSON válido, sin explicaciones ni markdown:
 {"type":"Simple" o "Combinada","desc":"...","odds":numero_2_decimales,"stake":numero,"date":"YYYY-MM-DD","notes":""}`;
 
-  const content=await callDS([{role:"user",content:prompt}],{temperature:0.1});
+  const content=await callGemini([
+    {inline_data:{mime_type:mime,data:b64}},
+    {text:prompt}
+  ],{temperature:0.1});
   try{return JSON.parse(cleanJSON(content));}catch{throw new Error("No se pudo parsear: "+content);}
 }
 
@@ -104,18 +101,13 @@ async function parseBetText(text){
 
 "${text}"
 
-FORMATO de desc obligatorio — patas separadas con " × ", cada pata: "Equipo mercado (cuota)".
-Ejemplos correctos:
-- "Liverpool BTTS (1.61) × Barcelona +3.5 (1.66) × Man City gana (1.66)"
-- "Nantes U2.5 (1.61) × Man City gana FA Cup (2.05)"
-- "Monaco DC X2 vs PSG"
+${BET_FORMAT_PROMPT}
 
-Cuotas siempre con 2 decimales (1.50, no 1.5). Cuota total = producto de todas las cuotas, 2 decimales.
 Si no dice stake, pon 15. Si no dice fecha, usa "${today}".
 
-Devuelve SOLO JSON:
-{"type":"Simple" o "Combinada","desc":"...","odds":numero,"stake":numero,"date":"YYYY-MM-DD","notes":""}`;
-  const content=await callDS([{role:"user",content:prompt}]);
+Devuelve SOLO JSON válido:
+{"type":"Simple" o "Combinada","desc":"...","odds":numero_2_decimales,"stake":numero,"date":"YYYY-MM-DD","notes":""}`;
+  const content=await callGemini([{text:prompt}]);
   try{return JSON.parse(cleanJSON(content));}catch{throw new Error("No se pudo parsear: "+content);}
 }
 
@@ -123,10 +115,10 @@ async function aiAnalyze(bets){
   const settled=bets.filter(b=>b.result!=="pending").map(b=>({date:b.date,type:b.type,desc:b.desc,odds:b.odds,stake:b.stake,result:b.result,pl:b.pl}));
   const prompt=`Eres analista experto de apuestas deportivas. Analiza este historial EN ESPAÑOL.
 Historial: ${JSON.stringify(settled)}
-Devuelve SOLO JSON:
+Devuelve SOLO JSON válido:
 {"resumen":"2-3 frases","stats":{"totalBets":N,"wins":N,"losses":N,"cashouts":N,"winRate":"X%","roi":"X%","totalPL":N,"avgOdds":N},"mejoresMercados":[{"mercado":"nombre","record":"W-L","pl":N,"nota":"breve"}],"peoresMercados":[{"mercado":"nombre","record":"W-L","pl":N,"nota":"breve"}],"diasSemana":[{"dia":"nombre","bets":N,"wins":N,"pl":N}],"ligas":[{"liga":"nombre","bets":N,"wins":N,"pl":N}],"rachas":"descripción","insights":["1","2","3"],"recomendaciones":["1","2","3"]}
 Sé específico. Identifica ligas por nombres de equipos.`;
-  const content=await callDS([{role:"user",content:prompt}],{maxTokens:3000,temperature:0.4});
+  const content=await callGemini([{text:prompt}],{temperature:0.4});
   try{return JSON.parse(cleanJSON(content));}catch{throw new Error("No se pudo parsear análisis: "+content);}
 }
 
@@ -140,9 +132,9 @@ async function aiWeekly(bets){
   const prompt=`Eres periodista deportivo. Escribe crónica de apuestas en ESPAÑOL, ameno y profesional.
 Semana: ${JSON.stringify(ws)}
 Historial: ${JSON.stringify(all)}
-Devuelve SOLO JSON:
+Devuelve SOLO JSON válido:
 {"titular":"máx 60 chars estilo prensa","subtitulo":"balance semana","cronica":"3-5 párrafos contando cada apuesta, partidos, resultados, sorpresas","balance":{"apuestas":N,"ganadas":N,"perdidas":N,"cashouts":N,"pl":N,"roi":"X%"},"mejorApuesta":"cuál y por qué","peorApuesta":"cuál y por qué","leccion":"qué mejorar","perspectiva":"tendencia y ajustes"}`;
-  const content=await callDS([{role:"user",content:prompt}],{maxTokens:3000,temperature:0.6});
+  const content=await callGemini([{text:prompt}],{temperature:0.6});
   try{return JSON.parse(cleanJSON(content));}catch{throw new Error("No se pudo generar reporte: "+content);}
 }
 
@@ -433,13 +425,13 @@ function SettingsView({onBack}){
   return(<div style={{flex:1,overflow:"auto",padding:"14px 18px 80px"}}>
     <button onClick={onBack} style={{background:"none",border:"none",color:"var(--muted)",fontSize:13,cursor:"pointer",marginBottom:18,display:"flex",alignItems:"center",gap:5}}>← Volver</button>
     <div style={{fontSize:17,fontWeight:600,marginBottom:6}}>Configuración IA</div>
-    <div style={{fontSize:12,color:"var(--muted)",marginBottom:24,lineHeight:1.5}}>Gestiona tu conexión con DeepSeek.</div>
+    <div style={{fontSize:12,color:"var(--muted)",marginBottom:24,lineHeight:1.5}}>Gestiona tu conexión con Google Gemini.</div>
     <div style={{padding:"16px 14px",background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:10,marginBottom:20}}>
       <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:16}}>
         <div style={{width:8,height:8,borderRadius:"50%",background:hasAK()?"#5cb85c":"#d9534f",flexShrink:0}}/>
         <span style={{fontSize:13,color:hasAK()?"#5cb85c":"var(--muted)"}}>{hasAK()?"IA conectada":"IA no configurada"}</span>
       </div>
-      <div style={{fontSize:11,color:"var(--muted)",letterSpacing:1.4,textTransform:"uppercase",marginBottom:8}}>API Key de DeepSeek</div>
+      <div style={{fontSize:11,color:"var(--muted)",letterSpacing:1.4,textTransform:"uppercase",marginBottom:8}}>API Key de Google Gemini</div>
       <div style={{position:"relative"}}><input type={vis?"text":"password"} value={key} onChange={e=>setKey(e.target.value)} placeholder="sk-..." style={inp}/>
         <button onClick={()=>setVis(!vis)} style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",color:"var(--muted)",fontSize:11,cursor:"pointer",padding:"4px 6px",letterSpacing:0.3}}>{vis?"OCULTAR":"VER"}</button>
       </div>
@@ -539,7 +531,7 @@ function AITab({bets,onSettings}){
   const [aiMode,setAiMode]=useState("analysis"),[loading,setLoading]=useState(false),[error,setError]=useState(null),[aData,setAData]=useState(null),[wData,setWData]=useState(null);
   const settled=bets.filter(b=>b.result!=="pending");
   const run=async(type)=>{
-    if(!hasAK()){setError("Configura tu API key de DeepSeek primero");return;}
+    if(!hasAK()){setError("Configura tu API key de Gemini primero");return;}
     setLoading(true);setError(null);
     try{if(type==="analysis")setAData(await aiAnalyze(bets));else setWData(await aiWeekly(bets));}catch(e){setError(e.message);}
     setLoading(false);
@@ -564,7 +556,7 @@ function AITab({bets,onSettings}){
         <div style={{fontSize:12,color:"var(--muted)",marginBottom:20,lineHeight:1.5}}>Genera una crónica deportiva de tu semana.</div>
         <button onClick={()=>run("weekly")} style={{padding:"12px 28px",borderRadius:9,background:"linear-gradient(135deg,var(--accent),var(--cyan))",border:"none",color:"#fff",fontSize:14,fontWeight:500,cursor:"pointer"}}>Generar reporte</button>
       </div>)}
-      {loading&&(<div style={{textAlign:"center",padding:"40px 0"}}><div style={{fontSize:14,color:"var(--cyan2)",marginBottom:8}}>Analizando con DeepSeek...</div><div style={{fontSize:12,color:"var(--muted)"}}>Esto puede tardar unos segundos</div>
+      {loading&&(<div style={{textAlign:"center",padding:"40px 0"}}><div style={{fontSize:14,color:"var(--cyan2)",marginBottom:8}}>Analizando con Gemini...</div><div style={{fontSize:12,color:"var(--muted)"}}>Esto puede tardar unos segundos</div>
         <div style={{marginTop:16,height:3,background:"var(--bg3)",borderRadius:2,overflow:"hidden"}}><div style={{height:"100%",background:"linear-gradient(90deg,var(--accent),var(--cyan))",borderRadius:2,animation:"dsload 1.5s ease-in-out infinite",width:"40%"}}/></div>
         <style>{"@keyframes dsload{0%{transform:translateX(-100%)}100%{transform:translateX(350%)}}"}</style>
       </div>)}
