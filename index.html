@@ -62,15 +62,24 @@ async function parseBetScreenshot(file,onStatus){
   await worker.terminate();
   if(!text||text.trim().length<10)throw new Error("No se pudo leer texto de la imagen. Prueba con una captura más clara.");
   onStatus&&onStatus("Analizando con IA...");
-  const prompt=`Este es el texto extraído por OCR de una captura de una apuesta deportiva (Bet365 u otra casa):
+  const today=new Date().toISOString().split("T")[0];
+  const prompt=`Texto extraído por OCR de un boleto/ticket de apuesta deportiva (Bet365, Betfair, etc). El OCR puede tener errores, interpreta lo mejor posible:
 
 """
 ${text}
 """
 
-Interpreta el texto y extrae la información de la apuesta. Devuelve SOLO JSON válido:
-{"type":"Simple" o "Combinada","desc":"Selección1 (cuota1) × Selección2 (cuota2)... nombres cortos y claros","odds":cuota_total_decimal,"stake":cantidad_o_15,"date":"${new Date().toISOString().split("T")[0]}","notes":""}
-Si es combinada, la cuota total = producto de cuotas individuales. Formatea desc como: Arsenal gana (1.55) × Over 2.5 (1.90). Devuelve SOLO JSON.`;
+INSTRUCCIONES:
+1. Identifica cada selección/pata de la apuesta. Cada una tendrá un evento deportivo y una cuota decimal (número como 1.55, 2.30, etc).
+2. Si hay varias selecciones es "Combinada", si solo hay una es "Simple".
+3. CUOTA TOTAL: Si es combinada, MULTIPLICA todas las cuotas individuales. Ejemplo: 1.61 × 2.05 × 1.72 = 5.677. Calcula el producto exacto con decimales.
+4. STAKE: Busca la cantidad apostada (puede aparecer como "Apuesta:", "Stake:", un importe con €/$). Si no lo encuentras, pon 15.
+5. FECHA: Busca fechas en el texto (formato dd/mm/yyyy, dd-mm, "25 mar", etc). Si hay varias, usa la del partido. Si no hay ninguna, usa "${today}".
+6. Para desc, formatea como: "Equipo1 mercado (cuota) × Equipo2 mercado (cuota)". Mercados comunes: gana, pierde, DC X2, DC 1X, Over/Under 2.5, BTTS, HT, etc.
+
+Devuelve SOLO JSON válido, sin explicaciones:
+{"type":"Simple" o "Combinada","desc":"...","odds":numero_decimal_cuota_total,"stake":numero,"date":"YYYY-MM-DD","notes":""}`;
+
   const content=await callDS([{role:"user",content:prompt}]);
   try{return JSON.parse(cleanJSON(content));}catch{throw new Error("No se pudo parsear: "+content);}
 }
