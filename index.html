@@ -517,13 +517,15 @@ function AnalysisView({data}){
 
 function WeeklyView({data}){
   if(data.empty)return <div style={{padding:20,textAlign:"center",color:"var(--muted)",fontSize:13}}>{data.message}</div>;
-  const b=data.balance;
+  const b=data.balance||{};
   const weekDate=new Date().toLocaleDateString("es-ES",{day:"numeric",month:"long",year:"numeric"});
   const serif="'Playfair Display',Georgia,serif";
   const body="'Lora',Georgia,serif";
   const ruled={height:1,background:"var(--text)",opacity:0.3};
   const thinRule={height:1,background:"var(--text)",opacity:0.12};
-  const plColor=b.pl>=0?"#5cb85c":"#d9534f";
+  const plVal=Number(b.pl||0);
+  const plColor=plVal>=0?"#5cb85c":"#d9534f";
+  const cronicaText=(data.cronica||"").replace(/\\n/g,"\n");
   return(<div style={{background:"linear-gradient(180deg,rgba(25,22,18,0.95),var(--bg))",borderRadius:12,border:"1px solid rgba(200,180,130,0.15)",padding:"0 0 8px",overflow:"hidden"}}>
     {/* Masthead */}
     <div style={{textAlign:"center",padding:"16px 16px 0"}}>
@@ -548,10 +550,10 @@ function WeeklyView({data}){
     {/* Stats bar */}
     <div style={{display:"flex",justifyContent:"center",gap:16,padding:"12px 16px"}}>
       {[
-        {l:"Apuestas",v:b.apuestas,c:"var(--text)"},
-        {l:"Ganadas",v:b.ganadas,c:"#5cb85c"},
+        {l:"Apuestas",v:b.apuestas||0,c:"var(--text)"},
+        {l:"Ganadas",v:b.ganadas||0,c:"#5cb85c"},
         {l:"Perdidas",v:b.perdidas||0,c:"#d9534f"},
-        {l:"P&L",v:`${b.pl>=0?"+":""}${Number(b.pl||0).toFixed(2)}€`,c:plColor}
+        {l:"P&L",v:`${plVal>=0?"+":""}${plVal.toFixed(2)}€`,c:plColor}
       ].map(s=>(<div key={s.l} style={{textAlign:"center"}}>
         <div style={{fontSize:18,fontFamily:"'DM Mono',monospace",fontWeight:500,color:s.c,lineHeight:1}}>{s.v}</div>
         <div style={{fontSize:8,color:"rgba(200,180,130,0.45)",letterSpacing:1.5,textTransform:"uppercase",marginTop:4}}>{s.l}</div>
@@ -562,7 +564,7 @@ function WeeklyView({data}){
     {/* Crónica */}
     <div style={{padding:"14px 16px"}}>
       <div style={{fontSize:10,fontFamily:serif,color:"var(--gold)",letterSpacing:2,textTransform:"uppercase",marginBottom:10}}>Crónica</div>
-      {data.cronica?.split("\n").filter(p=>p.trim()).map((p,i)=>(<p key={i} style={{fontSize:13,fontFamily:body,color:"rgba(216,220,232,0.85)",lineHeight:1.8,marginBottom:10,textAlign:"justify"}}>{p}</p>))}
+      {cronicaText.split("\n").filter(p=>p.trim()).map((p,i)=>(<p key={i} style={{fontSize:13,fontFamily:body,color:"rgba(216,220,232,0.85)",lineHeight:1.8,marginBottom:10,textAlign:"justify"}}>{p}</p>))}
     </div>
     <div style={{padding:"0 16px"}}><div style={thinRule}/></div>
 
