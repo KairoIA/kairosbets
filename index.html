@@ -42,24 +42,18 @@ const getAK=()=>localStorage.getItem(AI_KEY_STORE)||"";
 const setAK=k=>localStorage.setItem(AI_KEY_STORE,k.trim());
 const hasAK=()=>!!getAK();
 
-async function callGemini(parts,{temperature=0.3,jsonMode=false}={}){
-  const key=getAK();if(!key)throw new Error("API key de Gemini no configurada");
-  const genCfg={temperature,maxOutputTokens:65536};
-  if(jsonMode)genCfg.responseMimeType="application/json";
-  var url="https://generativelanguage.googleapis.com/v1beta/models/"+GEMINI_MODEL+":generateContent?key="+key;
-  var body={contents:[{parts:parts}],generationConfig:genCfg};
-  var res=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+async function callAI(messages,opts){
+  var o=opts||{};var temp=o.temperature||0.3;var jm=o.jsonMode||false;
+  var key=getAK();if(!key)throw new Error("API key de Gemini no configurada");
+  var url="https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
+  var body={model:GEMINI_MODEL,messages:messages,temperature:temp,max_tokens:8192};
+  if(jm)body.response_format={type:"json_object"};
+  var res=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+key},body:JSON.stringify(body)});
   if(!res.ok){var err=await res.text();throw new Error("Gemini error "+res.status+": "+err);}
   var data=await res.json();
-  if(!data.candidates||!data.candidates[0].content)throw new Error("Respuesta vacía de Gemini");
-  var finish=data.candidates[0].finishReason;
-  if(finish==="MAX_TOKENS")throw new Error("Respuesta truncada. Inténtalo de nuevo.");
-  var allParts=data.candidates[0].content.parts||[];
-  var textParts=[];
-  for(var i=0;i<allParts.length;i++){if(allParts[i].text&&!allParts[i].thought)textParts.push(allParts[i].text);}
-  return textParts.join("");
+  return data.choices[0].message.content;
 }
-function fileToB64(file){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(",")[1]);r.onerror=rej;r.readAsDataURL(file);})}
+function fileToB64(file){return new Promise(function(res,rej){var r=new FileReader();r.onload=function(){res(r.result.split(",")[1]);};r.onerror=rej;r.readAsDataURL(file);})}
 function cleanJSON(s){
   s=s.replace(/```json\n?/g,"").replace(/```\n?/g,"").trim();
   var startO=s.indexOf("{"),endO=s.lastIndexOf("}");
@@ -116,10 +110,7 @@ ${BET_FORMAT_PROMPT}
 Devuelve SOLO JSON válido, sin explicaciones ni markdown:
 {"type":"Simple" o "Combinada","desc":"...","odds":numero_2_decimales,"stake":numero,"date":"YYYY-MM-DD","notes":""}`;
 
-  const content=await callGemini([
-    {inline_data:{mime_type:mime,data:b64}},
-    {text:prompt}
-  ],{temperature:0.1,jsonMode:true});
+  const content=await callAI([{role:"user",content:[{type:"image_url",image_url:{url:"data:"+mime+";base64,"+b64}},{type:"text",text:prompt}]}],{temperature:0.1,jsonMode:true});
   try{return safeParseJSON(content);}catch{throw new Error("No se pudo parsear: "+content);}
 }
 
@@ -135,7 +126,7 @@ Si no dice stake, pon 15. Si no dice fecha, usa "${today}".
 
 Devuelve SOLO JSON válido:
 {"type":"Simple" o "Combinada","desc":"...","odds":numero_2_decimales,"stake":numero,"date":"YYYY-MM-DD","notes":""}`;
-  const content=await callGemini([{text:prompt}],{jsonMode:true});
+  const content=await callAI([{role:"user",content:prompt}],{jsonMode:true});
   try{return safeParseJSON(content);}catch{throw new Error("No se pudo parsear: "+content);}
 }
 
@@ -146,7 +137,7 @@ Historial: ${JSON.stringify(settled)}
 Devuelve SOLO JSON válido:
 {"resumen":"2-3 frases","stats":{"totalBets":N,"wins":N,"losses":N,"cashouts":N,"winRate":"X%","roi":"X%","totalPL":N,"avgOdds":N},"mejoresMercados":[{"mercado":"nombre","record":"W-L","pl":N,"nota":"breve"}],"peoresMercados":[{"mercado":"nombre","record":"W-L","pl":N,"nota":"breve"}],"diasSemana":[{"dia":"nombre","bets":N,"wins":N,"pl":N}],"ligas":[{"liga":"nombre","bets":N,"wins":N,"pl":N}],"rachas":"descripción","insights":["1","2","3"],"recomendaciones":["1","2","3"]}
 Sé específico. Identifica ligas por nombres de equipos.`;
-  const content=await callGemini([{text:prompt}],{temperature:0.4,jsonMode:true});
+  const content=await callAI([{role:"user",content:prompt}],{temperature:0.4,jsonMode:true});
   try{return safeParseJSON(content);}catch{throw new Error("No se pudo parsear análisis: "+content);}
 }
 
@@ -162,7 +153,7 @@ Semana: ${JSON.stringify(ws)}
 Historial: ${JSON.stringify(all)}
 Devuelve SOLO JSON válido:
 {"titular":"máx 50 chars","subtitulo":"balance breve","cronica":"2 párrafos cortos máximo 300 chars total, resumen conciso","balance":{"apuestas":N,"ganadas":N,"perdidas":N,"cashouts":N,"pl":N,"roi":"X%"},"mejorApuesta":"1 frase corta","peorApuesta":"1 frase corta","leccion":"1 frase","perspectiva":"1 frase"}`;
-  const content=await callGemini([{text:prompt}],{temperature:0.6,jsonMode:true});
+  const content=await callAI([{role:"user",content:prompt}],{temperature:0.6,jsonMode:true});
   try{return safeParseJSON(content);}catch{throw new Error("No se pudo generar reporte: "+content);}
 }
 
