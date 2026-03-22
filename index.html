@@ -351,7 +351,7 @@ function NewBet({onBack,onSave}){
       <div style={{fontSize:28,marginBottom:8}}>📷</div>
       <div style={{fontSize:13,color:"var(--text)",marginBottom:4}}>Sube captura de tu apuesta</div>
       <div style={{fontSize:11,color:"var(--muted)",marginBottom:14}}>Bet365, etc. — la IA extraerá los datos</div>
-      <input ref={fileRef} type="file" accept="image/*" capture="environment" onChange={handlePhoto} style={{display:"none"}} id="bet-ss"/>
+      <input ref={fileRef} type="file" accept="image/*" onChange={handlePhoto} style={{display:"none"}} id="bet-ss"/>
       <label htmlFor="bet-ss" style={{display:"inline-block",padding:"10px 22px",borderRadius:8,background:"linear-gradient(135deg,var(--accent),var(--cyan))",color:"#fff",fontSize:13,fontWeight:500,cursor:"pointer"}}>{aiLoad?"Analizando...":"Seleccionar imagen"}</label>
     </div></div>)}
     {mode==="text"&&(<div style={{marginBottom:18}}><div style={{padding:14,background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:10}}>
