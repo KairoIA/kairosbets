@@ -323,10 +323,11 @@ function History({bets,onBet}){
     </div>{i<sorted.length-1&&<Sep/>}</div>);})}
     <div style={{height:80}}/>
   </div>);}
-function Detail({bet,onBack,onUpdate}){
-  const [res,setRes]=useState(bet.result),[ret,setRet]=useState(bet.result!=="pending"&&bet.pl!=null?(bet.stake+bet.pl).toFixed(2):""),[notes,setNotes]=useState(bet.notes||""),[saved,setSaved]=useState(false);
+function Detail({bet,onBack,onUpdate,onDelete}){
+  const [res,setRes]=useState(bet.result),[ret,setRet]=useState(bet.result!=="pending"&&bet.pl!=null?(bet.stake+bet.pl).toFixed(2):""),[notes,setNotes]=useState(bet.notes||""),[saved,setSaved]=useState(false),[confirmDel,setConfirmDel]=useState(false);
   const pl=res==="loss"?-bet.stake:ret!==""?parseFloat((parseFloat(ret)-bet.stake).toFixed(2)):null;
   const save=()=>{onUpdate({...bet,result:res,pl:res==="pending"?null:pl,notes});setSaved(true);setTimeout(()=>{setSaved(false);onBack();},600);};
+  const doDelete=()=>{if(!confirmDel){setConfirmDel(true);return;}onDelete(bet.id);onBack();};
   const inp={width:"100%",padding:"11px 13px",borderRadius:7,border:"1px solid var(--border)",background:"var(--bg3)",color:"var(--text)",fontSize:14};
   return(<div style={{flex:1,overflow:"auto",padding:"14px 18px 80px"}}>
     <button onClick={onBack} style={{background:"none",border:"none",color:"var(--muted)",fontSize:13,cursor:"pointer",marginBottom:18}}>← Volver</button>
@@ -347,7 +348,8 @@ function Detail({bet,onBack,onUpdate}){
     <div style={{marginBottom:22}}><div style={{fontSize:11,color:"var(--muted)",letterSpacing:1.4,textTransform:"uppercase",marginBottom:10}}>Notas</div>
       <textarea value={notes} onChange={e=>setNotes(e.target.value)} rows={3} style={{...inp,resize:"none",lineHeight:1.5}}/>
     </div>
-    <button onClick={save} style={{width:"100%",padding:13,borderRadius:9,cursor:"pointer",background:saved?"transparent":"linear-gradient(135deg,var(--accent),var(--cyan))",border:saved?"1px solid rgba(92,184,92,0.4)":"none",color:saved?"#5cb85c":"#fff",fontSize:14,fontWeight:500}}>{saved?"✓ Guardado":"Guardar"}</button>
+    <button onClick={save} style={{width:"100%",padding:13,borderRadius:9,cursor:"pointer",background:saved?"transparent":"linear-gradient(135deg,var(--accent),var(--cyan))",border:saved?"1px solid rgba(92,184,92,0.4)":"none",color:saved?"#5cb85c":"#fff",fontSize:14,fontWeight:500,marginBottom:12}}>{saved?"✓ Guardado":"Guardar"}</button>
+    {bet.result==="pending"&&<button onClick={doDelete} style={{width:"100%",padding:12,borderRadius:9,cursor:"pointer",background:confirmDel?"rgba(217,83,79,0.12)":"transparent",border:"1px solid rgba(217,83,79,0.3)",color:"#d9534f",fontSize:13,fontWeight:500}}>{confirmDel?"Pulsa de nuevo para confirmar":"Cancelar apuesta"}</button>}
   </div>);}
 function NewBet({onBack,onSave}){
   const today=new Date().toISOString().split("T")[0];
@@ -587,7 +589,7 @@ function App(){
           </div>))}
         </div>
       </div>)}
-      {view==="detail"&&sel&&(<div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}><Detail bet={sel} onBack={()=>{setView("main");setSel(null);}} onUpdate={u=>{const nb=[...bets];nb[nb.findIndex(x=>x.id===u.id)]=u;persist(nb);}}/></div>)}
+      {view==="detail"&&sel&&(<div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}><Detail bet={sel} onBack={()=>{setView("main");setSel(null);}} onUpdate={u=>{const nb=[...bets];nb[nb.findIndex(x=>x.id===u.id)]=u;persist(nb);}} onDelete={id=>{persist(bets.filter(x=>x.id!==id));setSel(null);}}/></div>)}
       {view==="newbet"&&(<div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}><NewBet onBack={()=>setView("main")} onSave={b=>{persist([...bets,b]);setView("main");}}/></div>)}
       {view==="settings"&&(<div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}><SettingsView onBack={()=>{setView("main");setTab("ai");}}/></div>)}
       {view==="main"&&<TabBar active={tab} onChange={setTab}/>}
