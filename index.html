@@ -33,7 +33,71 @@
     };
   </script>
   <script type="text/babel" data-presets="react">
-const{useState,useEffect,useRef}=React;
+const{useState,useEffect,useRef,useCallback}=React;
+
+// === DeepSeek AI Service ===
+const DS_API="https://api.deepseek.com/v1/chat/completions";
+const DS_MODEL="deepseek-chat";
+const DS_KEY_STORE="kairosbets_ds_key";
+const DS_DEFAULT_KEY="sk-e5e32b90703245cc904f5d5ccff47ea1";
+const getAK=()=>localStorage.getItem(DS_KEY_STORE)||DS_DEFAULT_KEY;
+const setAK=k=>localStorage.setItem(DS_KEY_STORE,k.trim());
+const hasAK=()=>!!getAK();
+
+async function callDS(messages,{maxTokens=2048,temperature=0.3}={}){
+  const key=getAK();if(!key)throw new Error("API key de DeepSeek no configurada");
+  const res=await fetch(DS_API,{method:"POST",headers:{"Content-Type":"application/json",Authorization:`Bearer ${key}`},
+    body:JSON.stringify({model:DS_MODEL,messages,max_tokens:maxTokens,temperature})});
+  if(!res.ok){const err=await res.text();throw new Error(`DeepSeek error ${res.status}: ${err}`);}
+  return(await res.json()).choices[0].message.content;
+}
+function fileToB64(file){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(",")[1]);r.onerror=rej;r.readAsDataURL(file);})}
+function cleanJSON(s){return s.replace(/```json\n?/g,"").replace(/```\n?/g,"").trim();}
+
+async function parseBetScreenshot(file){
+  const b64=await fileToB64(file),mime=file.type||"image/jpeg";
+  const prompt=`Analiza esta captura de pantalla de una apuesta deportiva (probablemente de Bet365).
+Extrae la información y devuélvela SOLO como JSON válido, sin texto adicional:
+{"type":"Simple" o "Combinada","desc":"Selección1 (cuota1) × Selección2 (cuota2)... nombres cortos","odds":cuota_total_decimal,"stake":cantidad_o_15,"date":"YYYY-MM-DD","notes":"info adicional"}
+La cuota total de combinada = producto de cuotas individuales. Devuelve SOLO JSON.`;
+  const content=await callDS([{role:"user",content:[{type:"image_url",image_url:{url:`data:${mime};base64,${b64}`}},{type:"text",text:prompt}]}]);
+  try{return JSON.parse(cleanJSON(content));}catch{throw new Error("No se pudo parsear: "+content);}
+}
+
+async function parseBetText(text){
+  const prompt=`El usuario registra una apuesta en lenguaje natural: "${text}"
+Devuelve SOLO JSON: {"type":"Simple"/"Combinada","desc":"Sel1 (cuota1) × Sel2 (cuota2)...","odds":cuota_total,"stake":cantidad_o_15,"date":"${new Date().toISOString().split("T")[0]}","notes":""}`;
+  const content=await callDS([{role:"user",content:prompt}]);
+  try{return JSON.parse(cleanJSON(content));}catch{throw new Error("No se pudo parsear: "+content);}
+}
+
+async function aiAnalyze(bets){
+  const settled=bets.filter(b=>b.result!=="pending").map(b=>({date:b.date,type:b.type,desc:b.desc,odds:b.odds,stake:b.stake,result:b.result,pl:b.pl}));
+  const prompt=`Eres analista experto de apuestas deportivas. Analiza este historial EN ESPAÑOL.
+Historial: ${JSON.stringify(settled)}
+Devuelve SOLO JSON:
+{"resumen":"2-3 frases","stats":{"totalBets":N,"wins":N,"losses":N,"cashouts":N,"winRate":"X%","roi":"X%","totalPL":N,"avgOdds":N},"mejoresMercados":[{"mercado":"nombre","record":"W-L","pl":N,"nota":"breve"}],"peoresMercados":[{"mercado":"nombre","record":"W-L","pl":N,"nota":"breve"}],"diasSemana":[{"dia":"nombre","bets":N,"wins":N,"pl":N}],"ligas":[{"liga":"nombre","bets":N,"wins":N,"pl":N}],"rachas":"descripción","insights":["1","2","3"],"recomendaciones":["1","2","3"]}
+Sé específico. Identifica ligas por nombres de equipos.`;
+  const content=await callDS([{role:"user",content:prompt}],{maxTokens:3000,temperature:0.4});
+  try{return JSON.parse(cleanJSON(content));}catch{throw new Error("No se pudo parsear análisis: "+content);}
+}
+
+async function aiWeekly(bets){
+  const settled=bets.filter(b=>b.result!=="pending");
+  const now=new Date(),weekAgo=new Date(now.getTime()-7*24*60*60*1000);
+  const week=settled.filter(b=>new Date(b.date+"T12:00:00")>=weekAgo);
+  if(!week.length)return{empty:true,message:"No hay apuestas resueltas en los últimos 7 días."};
+  const ws=week.map(b=>({date:b.date,type:b.type,desc:b.desc,odds:b.odds,stake:b.stake,result:b.result,pl:b.pl}));
+  const all=settled.map(b=>({date:b.date,result:b.result,pl:b.pl,odds:b.odds}));
+  const prompt=`Eres periodista deportivo. Escribe crónica de apuestas en ESPAÑOL, ameno y profesional.
+Semana: ${JSON.stringify(ws)}
+Historial: ${JSON.stringify(all)}
+Devuelve SOLO JSON:
+{"titular":"máx 60 chars estilo prensa","subtitulo":"balance semana","cronica":"3-5 párrafos contando cada apuesta, partidos, resultados, sorpresas","balance":{"apuestas":N,"ganadas":N,"perdidas":N,"cashouts":N,"pl":N,"roi":"X%"},"mejorApuesta":"cuál y por qué","peorApuesta":"cuál y por qué","leccion":"qué mejorar","perspectiva":"tendencia y ajustes"}`;
+  const content=await callDS([{role:"user",content:prompt}],{maxTokens:3000,temperature:0.6});
+  try{return JSON.parse(cleanJSON(content));}catch{throw new Error("No se pudo generar reporte: "+content);}
+}
+
 const STORAGE_KEY='kairosbets_v4';
 const INITIAL_BANKROLL=15;
 
@@ -268,14 +332,35 @@ function Detail({bet,onBack,onUpdate}){
 function NewBet({onBack,onSave}){
   const today=new Date().toISOString().split("T")[0];
   const [date,setDate]=useState(today),[type,setType]=useState("Combinada"),[desc,setDesc]=useState(""),[odds,setOdds]=useState(""),[stake,setStake]=useState("15"),[res,setRes]=useState("pending"),[ret,setRet]=useState(""),[notes,setNotes]=useState(""),[saved,setSaved]=useState(false);
+  const [aiLoad,setAiLoad]=useState(false),[aiErr,setAiErr]=useState(null),[aiTxt,setAiTxt]=useState(""),[mode,setMode]=useState("manual");
+  const fileRef=useRef(null);
   const pl=res==="loss"?-parseFloat(stake||15):ret!==""?parseFloat((parseFloat(ret)-parseFloat(stake||15)).toFixed(2)):null;
   const valid=desc.trim()&&odds;
+  const applyAI=d=>{if(d.type)setType(d.type);if(d.desc)setDesc(d.desc);if(d.odds)setOdds(String(d.odds));if(d.stake)setStake(String(d.stake));if(d.date)setDate(d.date);if(d.notes)setNotes(d.notes);setRes("pending");setMode("manual");};
+  const handlePhoto=async e=>{const f=e.target.files?.[0];if(!f)return;if(!hasAK()){setAiErr("Configura tu API key en la pestaña IA → ⚙");return;}setAiLoad(true);setAiErr(null);try{applyAI(await parseBetScreenshot(f));}catch(e){setAiErr(e.message);}setAiLoad(false);if(fileRef.current)fileRef.current.value="";};
+  const handleText=async()=>{if(!aiTxt.trim())return;if(!hasAK()){setAiErr("Configura tu API key en la pestaña IA → ⚙");return;}setAiLoad(true);setAiErr(null);try{applyAI(await parseBetText(aiTxt));setAiTxt("");}catch(e){setAiErr(e.message);}setAiLoad(false);};
   const save=()=>{if(!valid)return;onSave({id:"b"+Date.now(),date,type,desc,odds:parseFloat(odds),stake:parseFloat(stake||15),result:res,pl:res==="pending"?null:pl,bankroll:null,notes});setSaved(true);setTimeout(onBack,600);};
   const inp={width:"100%",padding:"11px 13px",borderRadius:7,border:"1px solid var(--border)",background:"var(--bg3)",color:"var(--text)",fontSize:14};
   const lbl={fontSize:11,color:"var(--muted)",letterSpacing:1.4,textTransform:"uppercase",marginBottom:8,display:"block"};
+  const mBtn=(id,label,icon)=>(<button key={id} onClick={()=>setMode(id)} style={{flex:1,padding:"10px 8px",borderRadius:8,cursor:"pointer",fontSize:12,fontWeight:500,background:mode===id?"rgba(58,111,216,0.12)":"rgba(255,255,255,0.03)",border:`1px solid ${mode===id?"rgba(58,111,216,0.35)":"var(--border)"}`,color:mode===id?"var(--cyan2)":"var(--muted)",display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>{icon} {label}</button>);
   return(<div style={{flex:1,overflow:"auto",padding:"14px 18px 80px"}}>
     <button onClick={onBack} style={{background:"none",border:"none",color:"var(--muted)",fontSize:13,cursor:"pointer",marginBottom:16}}>← Volver</button>
-    <div style={{fontSize:17,fontWeight:600,marginBottom:20}}>Nueva apuesta</div>
+    <div style={{fontSize:17,fontWeight:600,marginBottom:16}}>Nueva apuesta</div>
+    <div style={{display:"flex",gap:6,marginBottom:16}}>{mBtn("manual","Manual","✎")}{mBtn("photo","Captura","📷")}{mBtn("text","Texto IA","💬")}</div>
+    {mode==="photo"&&(<div style={{marginBottom:18}}><div style={{padding:20,background:"var(--bg2)",border:"2px dashed var(--border)",borderRadius:12,textAlign:"center"}}>
+      <div style={{fontSize:28,marginBottom:8}}>📷</div>
+      <div style={{fontSize:13,color:"var(--text)",marginBottom:4}}>Sube captura de tu apuesta</div>
+      <div style={{fontSize:11,color:"var(--muted)",marginBottom:14}}>Bet365, etc. — la IA extraerá los datos</div>
+      <input ref={fileRef} type="file" accept="image/*" capture="environment" onChange={handlePhoto} style={{display:"none"}} id="bet-ss"/>
+      <label htmlFor="bet-ss" style={{display:"inline-block",padding:"10px 22px",borderRadius:8,background:"linear-gradient(135deg,var(--accent),var(--cyan))",color:"#fff",fontSize:13,fontWeight:500,cursor:"pointer"}}>{aiLoad?"Analizando...":"Seleccionar imagen"}</label>
+    </div></div>)}
+    {mode==="text"&&(<div style={{marginBottom:18}}><div style={{padding:14,background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:10}}>
+      <div style={{fontSize:11,color:"var(--muted)",marginBottom:8}}>Escribe la apuesta en lenguaje natural</div>
+      <textarea value={aiTxt} onChange={e=>setAiTxt(e.target.value)} rows={3} placeholder='ej: "combinada: Nantes under 2.5 a 1.61, Man City gana FA Cup a 2.05, stake 15"' style={{...inp,resize:"none",lineHeight:1.5,marginBottom:10}}/>
+      <button onClick={handleText} disabled={!aiTxt.trim()||aiLoad} style={{width:"100%",padding:10,borderRadius:8,background:!aiTxt.trim()||aiLoad?"var(--bg3)":"linear-gradient(135deg,var(--accent),var(--cyan))",border:"none",color:!aiTxt.trim()||aiLoad?"var(--muted)":"#fff",fontSize:13,fontWeight:500,cursor:!aiTxt.trim()||aiLoad?"not-allowed":"pointer"}}>{aiLoad?"Procesando...":"Rellenar con IA"}</button>
+    </div></div>)}
+    {aiLoad&&(<div style={{padding:12,background:"rgba(58,111,216,0.08)",border:"1px solid rgba(58,111,216,0.2)",borderRadius:8,marginBottom:14,textAlign:"center"}}><div style={{fontSize:12,color:"var(--cyan2)"}}>DeepSeek analizando...</div><div style={{marginTop:8,height:3,background:"var(--bg3)",borderRadius:2,overflow:"hidden"}}><div style={{height:"100%",background:"linear-gradient(90deg,var(--accent),var(--cyan))",borderRadius:2,animation:"dsload 1.5s ease-in-out infinite",width:"40%"}}/></div><style>{"@keyframes dsload{0%{transform:translateX(-100%)}100%{transform:translateX(350%)}}"}</style></div>)}
+    {aiErr&&(<div style={{padding:"10px 13px",background:"rgba(217,83,79,0.08)",border:"1px solid rgba(217,83,79,0.2)",borderRadius:8,marginBottom:14}}><div style={{fontSize:12,color:"#d9534f",lineHeight:1.4}}>{aiErr}</div></div>)}
     <div style={{marginBottom:15}}><label style={lbl}>Fecha</label><input type="date" value={date} onChange={e=>setDate(e.target.value)} style={{...inp,fontFamily:"'DM Mono',monospace"}}/></div>
     <div style={{marginBottom:15}}><label style={lbl}>Tipo</label><div style={{display:"flex",gap:7}}>{["Simple","Combinada"].map(t=>(<button key={t} onClick={()=>setType(t)} style={{flex:1,padding:11,borderRadius:7,cursor:"pointer",border:`1px solid ${type===t?"rgba(58,111,216,0.5)":"var(--border)"}`,background:type===t?"rgba(58,111,216,0.1)":"rgba(255,255,255,0.03)",color:type===t?"var(--cyan2)":"var(--muted)",fontSize:13}}>{t}</button>))}</div></div>
     <div style={{marginBottom:15}}><label style={lbl}>Descripción / Patas</label><textarea value={desc} onChange={e=>setDesc(e.target.value)} rows={3} placeholder="ej: Nantes U2.5 × Man City gana" style={{...inp,resize:"none",lineHeight:1.5}}/></div>
@@ -288,14 +373,167 @@ function NewBet({onBack,onSave}){
     <div style={{marginBottom:22}}><label style={lbl}>Notas</label><textarea value={notes} onChange={e=>setNotes(e.target.value)} rows={2} style={{...inp,resize:"none"}}/></div>
     <button onClick={save} disabled={!valid} style={{width:"100%",padding:13,borderRadius:9,cursor:valid?"pointer":"not-allowed",background:saved?"transparent":valid?"linear-gradient(135deg,var(--accent),var(--cyan))":"var(--bg3)",border:saved?"1px solid rgba(92,184,92,0.4)":"none",color:saved?"#5cb85c":valid?"#fff":"var(--muted)",fontSize:14,fontWeight:500}}>{saved?"✓ Guardado":"Guardar apuesta"}</button>
   </div>);}
+// === Settings Screen ===
+function SettingsView({onBack}){
+  const [key,setKey]=useState(getAK()),[saved,setSaved]=useState(false),[vis,setVis]=useState(false);
+  const doSave=()=>{setAK(key);setSaved(true);setTimeout(()=>setSaved(false),1500);};
+  const inp={width:"100%",padding:"12px 13px",borderRadius:8,border:"1px solid var(--border)",background:"var(--bg3)",color:"var(--text)",fontSize:13,fontFamily:"'DM Mono',monospace"};
+  return(<div style={{flex:1,overflow:"auto",padding:"14px 18px 80px"}}>
+    <button onClick={onBack} style={{background:"none",border:"none",color:"var(--muted)",fontSize:13,cursor:"pointer",marginBottom:18,display:"flex",alignItems:"center",gap:5}}>← Volver</button>
+    <div style={{fontSize:17,fontWeight:600,marginBottom:6}}>Configuración IA</div>
+    <div style={{fontSize:12,color:"var(--muted)",marginBottom:24,lineHeight:1.5}}>Gestiona tu conexión con DeepSeek.</div>
+    <div style={{padding:"16px 14px",background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:10,marginBottom:20}}>
+      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:16}}>
+        <div style={{width:8,height:8,borderRadius:"50%",background:hasAK()?"#5cb85c":"#d9534f",flexShrink:0}}/>
+        <span style={{fontSize:13,color:hasAK()?"#5cb85c":"var(--muted)"}}>{hasAK()?"IA conectada":"IA no configurada"}</span>
+      </div>
+      <div style={{fontSize:11,color:"var(--muted)",letterSpacing:1.4,textTransform:"uppercase",marginBottom:8}}>API Key de DeepSeek</div>
+      <div style={{position:"relative"}}><input type={vis?"text":"password"} value={key} onChange={e=>setKey(e.target.value)} placeholder="sk-..." style={inp}/>
+        <button onClick={()=>setVis(!vis)} style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",color:"var(--muted)",fontSize:11,cursor:"pointer",padding:"4px 6px",letterSpacing:0.3}}>{vis?"OCULTAR":"VER"}</button>
+      </div>
+      <div style={{fontSize:11,color:"var(--muted)",marginTop:10,lineHeight:1.5}}>Se guarda solo en este dispositivo. No se comparte con nadie.</div>
+    </div>
+    <button onClick={doSave} style={{width:"100%",padding:13,borderRadius:9,background:saved?"transparent":"linear-gradient(135deg,var(--accent),var(--cyan))",border:saved?"1px solid rgba(92,184,92,0.4)":"none",color:saved?"#5cb85c":"#fff",fontSize:14,fontWeight:500,cursor:"pointer"}}>{saved?"✓ Guardada":"Guardar API Key"}</button>
+  </div>);}
+
+// === AI Analysis Tab ===
+function StatCard({label,value,color}){
+  const isLong=String(value).length>6;
+  return(<div style={{padding:"12px 6px",textAlign:"center",background:"var(--bg2)",borderRadius:8,border:"1px solid var(--border)"}}>
+    <div style={{fontSize:isLong?15:20,fontFamily:"'DM Mono',monospace",fontWeight:500,color:color||"var(--text)",lineHeight:1.1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{value}</div>
+    <div style={{fontSize:9,color:"var(--muted)",marginTop:5,letterSpacing:0.5,textTransform:"uppercase"}}>{label}</div>
+  </div>);}
+function STitle({children}){return <div style={{fontSize:11,color:"var(--muted)",letterSpacing:1.4,textTransform:"uppercase",marginBottom:10,marginTop:20}}>{children}</div>;}
+
+function AnalysisView({data}){
+  const s=data.stats;
+  return(<div>
+    <div style={{padding:14,background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:10,marginBottom:16}}><div style={{fontSize:14,color:"var(--text)",lineHeight:1.6}}>{data.resumen}</div></div>
+    <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:4}}>
+      <StatCard label="Win Rate" value={s.winRate} color="#5cb85c"/>
+      <StatCard label="ROI" value={s.roi} color="var(--cyan)"/>
+      <StatCard label="P&L" value={`${s.totalPL>=0?"+":""}${Number(s.totalPL).toFixed(2)}€`} color={s.totalPL>=0?"#5cb85c":"#d9534f"}/>
+    </div>
+    <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:6,marginTop:6}}>
+      <StatCard label="Total" value={s.totalBets}/><StatCard label="Ganadas" value={s.wins} color="#5cb85c"/><StatCard label="Perdidas" value={s.losses} color="#d9534f"/><StatCard label="Avg Odds" value={Number(s.avgOdds||0).toFixed(2)} color="var(--gold)"/>
+    </div>
+    <STitle>Mejores mercados</STitle>
+    {data.mejoresMercados?.map((m,i)=>(<div key={i} style={{padding:"11px 13px",background:"rgba(92,184,92,0.06)",border:"1px solid rgba(92,184,92,0.15)",borderRadius:8,marginBottom:6}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4,gap:8}}><span style={{fontSize:13,color:"var(--text)",fontWeight:500,flex:1,minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.mercado}</span><div style={{display:"flex",gap:4,flexShrink:0}}><Bdg color="#5cb85c" border="rgba(92,184,92,0.3)">{m.record}</Bdg><Bdg color={m.pl>=0?"#5cb85c":"#d9534f"} border={m.pl>=0?"rgba(92,184,92,0.3)":"rgba(217,83,79,0.3)"}>{m.pl>=0?"+":""}{m.pl}€</Bdg></div></div>
+      <div style={{fontSize:12,color:"var(--muted)",lineHeight:1.4}}>{m.nota}</div></div>))}
+    <STitle>Mercados a mejorar</STitle>
+    {data.peoresMercados?.map((m,i)=>(<div key={i} style={{padding:"11px 13px",background:"rgba(217,83,79,0.06)",border:"1px solid rgba(217,83,79,0.15)",borderRadius:8,marginBottom:6}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4,gap:8}}><span style={{fontSize:13,color:"var(--text)",fontWeight:500,flex:1,minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.mercado}</span><div style={{display:"flex",gap:4,flexShrink:0}}><Bdg color="#d9534f" border="rgba(217,83,79,0.3)">{m.record}</Bdg><Bdg color="#d9534f" border="rgba(217,83,79,0.3)">{m.pl>=0?"+":""}{m.pl}€</Bdg></div></div>
+      <div style={{fontSize:12,color:"var(--muted)",lineHeight:1.4}}>{m.nota}</div></div>))}
+    {data.ligas?.length>0&&(<><STitle>Por liga / competición</STitle>
+      {data.ligas.map((l,i)=>(<div key={i} style={{padding:"10px 13px",background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:8,marginBottom:5}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <span style={{fontSize:13,color:"var(--text)",flex:1,minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",marginRight:8}}>{l.liga}</span>
+          <div style={{display:"flex",gap:4,flexShrink:0}}><Bdg>{l.bets}ap</Bdg><Bdg color="#5cb85c" border="rgba(92,184,92,0.3)">{l.wins}W</Bdg><Bdg color={l.pl>=0?"#5cb85c":"#d9534f"} border={l.pl>=0?"rgba(92,184,92,0.3)":"rgba(217,83,79,0.3)"}>{l.pl>=0?"+":""}{l.pl}€</Bdg></div>
+        </div>
+      </div>))}</>)}
+    {data.diasSemana?.length>0&&(<><STitle>Por día de la semana</STitle>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(90px,1fr))",gap:6}}>
+        {data.diasSemana.map((d,i)=>(<div key={i} style={{padding:"10px 8px",textAlign:"center",background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:8}}>
+          <div style={{fontSize:11,fontWeight:600,color:"var(--text)",marginBottom:4,letterSpacing:0.3}}>{d.dia}</div>
+          <div style={{fontSize:10,color:"var(--muted)"}}>{d.bets} ap · {d.wins}W</div>
+          <div style={{fontSize:12,fontFamily:"'DM Mono',monospace",color:d.pl>=0?"#5cb85c":"#d9534f",marginTop:4}}>{d.pl>=0?"+":""}{d.pl}€</div>
+        </div>))}
+      </div></>)}
+    <STitle>Rachas</STitle>
+    <div style={{padding:"11px 13px",background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:8,fontSize:13,color:"var(--text)",lineHeight:1.5}}>{data.rachas}</div>
+    <STitle>Insights</STitle>
+    {data.insights?.map((ins,i)=>(<div key={i} style={{padding:"10px 13px",background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:8,marginBottom:5,fontSize:13,color:"var(--text)",lineHeight:1.5}}>{ins}</div>))}
+    <STitle>Recomendaciones</STitle>
+    {data.recomendaciones?.map((r,i)=>(<div key={i} style={{padding:"10px 13px",background:"rgba(58,111,216,0.07)",border:"1px solid rgba(58,111,216,0.18)",borderRadius:8,marginBottom:5,fontSize:13,color:"var(--cyan2)",lineHeight:1.5}}>{r}</div>))}
+  </div>);}
+
+function WeeklyView({data}){
+  if(data.empty)return <div style={{padding:20,textAlign:"center",color:"var(--muted)",fontSize:13}}>{data.message}</div>;
+  const b=data.balance;
+  return(<div>
+    <div style={{padding:"18px 16px",background:"linear-gradient(145deg,rgba(58,111,216,0.12),rgba(74,144,196,0.08))",border:"1px solid rgba(58,111,216,0.2)",borderRadius:12,marginBottom:16}}>
+      <div style={{fontSize:18,fontWeight:600,color:"var(--text)",lineHeight:1.3,marginBottom:6}}>{data.titular}</div>
+      <div style={{fontSize:13,color:"var(--cyan2)",lineHeight:1.4}}>{data.subtitulo}</div>
+    </div>
+    <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:16}}>
+      <StatCard label="Apuestas" value={b.apuestas}/><StatCard label="Ganadas" value={b.ganadas} color="#5cb85c"/><StatCard label="P&L" value={`${b.pl>=0?"+":""}${Number(b.pl||0).toFixed(2)}€`} color={b.pl>=0?"#5cb85c":"#d9534f"}/>
+    </div>
+    <STitle>Crónica de la semana</STitle>
+    <div style={{padding:"14px 15px",background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:10,marginBottom:16}}>
+      {data.cronica?.split("\n").map((p,i)=>(<p key={i} style={{fontSize:13,color:"var(--text)",lineHeight:1.7,marginBottom:12}}>{p}</p>))}
+    </div>
+    <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:16}}>
+      <div style={{padding:"12px 14px",background:"rgba(92,184,92,0.06)",border:"1px solid rgba(92,184,92,0.15)",borderRadius:10}}>
+        <div style={{fontSize:10,color:"#5cb85c",letterSpacing:1.2,textTransform:"uppercase",marginBottom:6}}>Mejor apuesta</div>
+        <div style={{fontSize:12,color:"var(--text)",lineHeight:1.5}}>{data.mejorApuesta}</div>
+      </div>
+      <div style={{padding:"12px 14px",background:"rgba(217,83,79,0.06)",border:"1px solid rgba(217,83,79,0.15)",borderRadius:10}}>
+        <div style={{fontSize:10,color:"#d9534f",letterSpacing:1.2,textTransform:"uppercase",marginBottom:6}}>Peor apuesta</div>
+        <div style={{fontSize:12,color:"var(--text)",lineHeight:1.5}}>{data.peorApuesta}</div>
+      </div>
+    </div>
+    <STitle>Lección de la semana</STitle>
+    <div style={{padding:"12px 14px",background:"rgba(201,168,76,0.07)",border:"1px solid rgba(201,168,76,0.18)",borderRadius:10,marginBottom:16}}>
+      <div style={{fontSize:13,color:"var(--gold2)",lineHeight:1.6}}>{data.leccion}</div>
+    </div>
+    <STitle>Perspectiva</STitle>
+    <div style={{padding:"12px 14px",background:"rgba(58,111,216,0.07)",border:"1px solid rgba(58,111,216,0.18)",borderRadius:10}}>
+      <div style={{fontSize:13,color:"var(--cyan2)",lineHeight:1.6}}>{data.perspectiva}</div>
+    </div>
+  </div>);}
+
+function AITab({bets,onSettings}){
+  const [aiMode,setAiMode]=useState("analysis"),[loading,setLoading]=useState(false),[error,setError]=useState(null),[aData,setAData]=useState(null),[wData,setWData]=useState(null);
+  const settled=bets.filter(b=>b.result!=="pending");
+  const run=async(type)=>{
+    if(!hasAK()){setError("Configura tu API key de DeepSeek primero");return;}
+    setLoading(true);setError(null);
+    try{if(type==="analysis")setAData(await aiAnalyze(bets));else setWData(await aiWeekly(bets));}catch(e){setError(e.message);}
+    setLoading(false);
+  };
+  const tabBtn=(id,label,icon)=>(<button onClick={()=>setAiMode(id)} style={{flex:1,padding:"11px 10px",borderRadius:8,cursor:"pointer",fontSize:12,fontWeight:500,background:aiMode===id?"rgba(58,111,216,0.12)":"rgba(255,255,255,0.03)",border:`1px solid ${aiMode===id?"rgba(58,111,216,0.35)":"var(--border)"}`,color:aiMode===id?"var(--cyan2)":"var(--muted)",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>{icon} {label}</button>);
+  return(<div style={{flex:1,overflow:"auto"}}>
+    <div style={{padding:"14px 18px 10px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+      <div style={{fontSize:11,color:"var(--muted)",letterSpacing:1.4,textTransform:"uppercase"}}>Inteligencia artificial</div>
+      <button onClick={onSettings} style={{background:"none",border:"1px solid var(--border)",borderRadius:6,color:"var(--muted)",fontSize:13,cursor:"pointer",padding:"5px 10px",display:"flex",alignItems:"center",gap:5}}>⚙ <span style={{fontSize:10,letterSpacing:0.3}}>API</span></button>
+    </div><Sep/>
+    <div style={{padding:"12px 18px",display:"flex",gap:8}}>{tabBtn("analysis","Análisis","📊")}{tabBtn("weekly","Semanal","📰")}</div>
+    <div style={{padding:"0 18px 80px"}}>
+      {!loading&&!error&&aiMode==="analysis"&&!aData&&(<div style={{textAlign:"center",padding:"30px 0"}}>
+        <div style={{fontSize:32,marginBottom:12}}>📊</div>
+        <div style={{fontSize:14,color:"var(--text)",marginBottom:6}}>Análisis con IA</div>
+        <div style={{fontSize:12,color:"var(--muted)",marginBottom:20,lineHeight:1.5}}>Analiza {settled.length} apuestas para descubrir patrones, mercados fuertes y áreas de mejora.</div>
+        <button onClick={()=>run("analysis")} disabled={settled.length<3} style={{padding:"12px 28px",borderRadius:9,background:settled.length<3?"var(--bg3)":"linear-gradient(135deg,var(--accent),var(--cyan))",border:"none",color:settled.length<3?"var(--muted)":"#fff",fontSize:14,fontWeight:500,cursor:settled.length<3?"not-allowed":"pointer"}}>{settled.length<3?"Mínimo 3 apuestas":"Generar análisis"}</button>
+      </div>)}
+      {!loading&&!error&&aiMode==="weekly"&&!wData&&(<div style={{textAlign:"center",padding:"30px 0"}}>
+        <div style={{fontSize:32,marginBottom:12}}>📰</div>
+        <div style={{fontSize:14,color:"var(--text)",marginBottom:6}}>Reporte semanal</div>
+        <div style={{fontSize:12,color:"var(--muted)",marginBottom:20,lineHeight:1.5}}>Genera una crónica deportiva de tu semana.</div>
+        <button onClick={()=>run("weekly")} style={{padding:"12px 28px",borderRadius:9,background:"linear-gradient(135deg,var(--accent),var(--cyan))",border:"none",color:"#fff",fontSize:14,fontWeight:500,cursor:"pointer"}}>Generar reporte</button>
+      </div>)}
+      {loading&&(<div style={{textAlign:"center",padding:"40px 0"}}><div style={{fontSize:14,color:"var(--cyan2)",marginBottom:8}}>Analizando con DeepSeek...</div><div style={{fontSize:12,color:"var(--muted)"}}>Esto puede tardar unos segundos</div>
+        <div style={{marginTop:16,height:3,background:"var(--bg3)",borderRadius:2,overflow:"hidden"}}><div style={{height:"100%",background:"linear-gradient(90deg,var(--accent),var(--cyan))",borderRadius:2,animation:"dsload 1.5s ease-in-out infinite",width:"40%"}}/></div>
+        <style>{"@keyframes dsload{0%{transform:translateX(-100%)}100%{transform:translateX(350%)}}"}</style>
+      </div>)}
+      {error&&(<div style={{padding:14,background:"rgba(217,83,79,0.08)",border:"1px solid rgba(217,83,79,0.2)",borderRadius:10,marginTop:12}}>
+        <div style={{fontSize:13,color:"#d9534f",lineHeight:1.5}}>{error}</div>
+        <button onClick={()=>{setError(null);run(aiMode);}} style={{marginTop:10,padding:"8px 16px",borderRadius:7,background:"rgba(255,255,255,0.03)",border:"1px solid var(--border)",color:"var(--text)",fontSize:12,cursor:"pointer"}}>Reintentar</button>
+      </div>)}
+      {!loading&&!error&&aiMode==="analysis"&&aData&&(<><div style={{display:"flex",justifyContent:"flex-end",marginBottom:8}}><button onClick={()=>setAData(null)} style={{background:"none",border:"none",color:"var(--muted)",fontSize:11,cursor:"pointer"}}>Regenerar</button></div><AnalysisView data={aData}/></>)}
+      {!loading&&!error&&aiMode==="weekly"&&wData&&(<><div style={{display:"flex",justifyContent:"flex-end",marginBottom:8}}><button onClick={()=>setWData(null)} style={{background:"none",border:"none",color:"var(--muted)",fontSize:11,cursor:"pointer"}}>Regenerar</button></div><WeeklyView data={wData}/></>)}
+    </div>
+    <div style={{height:80}}/>
+  </div>);}
+
 function TabBar({active,onChange}){
-  const tabs=[{id:"dashboard",label:"Inicio",icon:"◆"},{id:"chart",label:"Gráfica",icon:"∿"},{id:"history",label:"Historial",icon:"≡"}];
+  const tabs=[{id:"dashboard",label:"Inicio",icon:"◆"},{id:"chart",label:"Gráfica",icon:"∿"},{id:"history",label:"Historial",icon:"≡"},{id:"ai",label:"IA",icon:"✦"}];
   return(<div style={{position:"absolute",bottom:0,left:0,right:0,height:58,background:"rgba(12,14,24,0.97)",backdropFilter:"blur(10px)",borderTop:"1px solid var(--border)",display:"flex"}}>
     {tabs.map(t=>(<button key={t.id} onClick={()=>onChange(t.id)} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:3,background:"none",border:"none",cursor:"pointer",color:active===t.id?"var(--cyan2)":"var(--muted)",transition:"color 0.15s"}}>
       <span style={{fontSize:16}}>{t.icon}</span><span style={{fontSize:10,letterSpacing:0.5,textTransform:"uppercase",fontWeight:active===t.id?500:400}}>{t.label}</span>
     </button>))}
   </div>);}
-const TABS=["dashboard","chart","history"];
+const TABS=["dashboard","chart","history","ai"];
 function App(){
   const [bets,setBets]=useState([]),[loaded,setLoaded]=useState(false),[tab,setTab]=useState("dashboard"),[view,setView]=useState("main"),[sel,setSel]=useState(null);
   useEffect(()=>{
@@ -324,11 +562,13 @@ function App(){
             {t==="dashboard"&&<Dashboard bets={bets} onNew={()=>setView("newbet")} onBet={openBet}/>}
             {t==="chart"&&<ChartTab bets={bets} onBet={openBet}/>}
             {t==="history"&&<History bets={bets} onBet={openBet}/>}
+            {t==="ai"&&<AITab bets={bets} onSettings={()=>setView("settings")}/>}
           </div>))}
         </div>
       </div>)}
       {view==="detail"&&sel&&(<div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}><Detail bet={sel} onBack={()=>{setView("main");setSel(null);}} onUpdate={u=>{const nb=[...bets];nb[nb.findIndex(x=>x.id===u.id)]=u;persist(nb);}}/></div>)}
       {view==="newbet"&&(<div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}><NewBet onBack={()=>setView("main")} onSave={b=>{persist([...bets,b]);setView("main");}}/></div>)}
+      {view==="settings"&&(<div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}><SettingsView onBack={()=>{setView("main");setTab("ai");}}/></div>)}
       {view==="main"&&<TabBar active={tab} onChange={setTab}/>}
     </div></>);
 }
