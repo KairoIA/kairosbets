@@ -158,7 +158,7 @@ async function aiWeekly(bets){
 Semana: ${JSON.stringify(ws)}
 Historial: ${JSON.stringify(all)}
 Devuelve SOLO JSON válido:
-{"titular":"máx 50 chars","subtitulo":"balance breve","cronica":"2 párrafos cortos máximo 300 chars total, resumen conciso","balance":{"apuestas":N,"ganadas":N,"perdidas":N,"cashouts":N,"pl":N,"roi":"X%"},"mejorApuesta":"1 frase corta","peorApuesta":"1 frase corta","leccion":"1 frase","perspectiva":"1 frase"}`;
+{"titular":"máx 60 chars estilo prensa deportiva","subtitulo":"resumen del balance de la semana","cronica":"3-4 párrafos contando cada apuesta, partidos, resultados y sorpresas. Sé específico con datos.","balance":{"apuestas":N,"ganadas":N,"perdidas":N,"cashouts":N,"pl":N,"roi":"X%"},"mejorApuesta":"cuál fue y por qué","peorApuesta":"cuál fue y por qué dolió","leccion":"qué se debió hacer mejor","perspectiva":"cómo vamos en general y qué ajustar"}`;
   const content=await callDeepSeek([{role:"user",content:prompt}],{temperature:0.6});
   try{return safeParseJSON(content);}catch{throw new Error("No se pudo generar reporte: "+content);}
 }
