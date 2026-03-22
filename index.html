@@ -61,7 +61,8 @@ async function callGeminiVision(base64,mimeType,prompt){
 }
 function fileToB64(file){return new Promise(function(res,rej){var r=new FileReader();r.onload=function(){res(r.result.split(",")[1]);};r.onerror=rej;r.readAsDataURL(file);})}
 function cleanJSON(s){
-  s=s.replace(/```json\n?/g,"").replace(/```\n?/g,"").trim();
+  var bt=String.fromCharCode(96);var fence=bt+bt+bt;
+  s=s.replace(new RegExp(fence+"json\\n?","g"),"").replace(new RegExp(fence+"\\n?","g"),"").trim();
   var startO=s.indexOf("{"),endO=s.lastIndexOf("}");
   if(startO!==-1&&endO>startO)s=s.substring(startO,endO+1);
   return s;
@@ -144,7 +145,7 @@ Devuelve SOLO JSON válido:
 {"resumen":"2-3 frases","stats":{"totalBets":N,"wins":N,"losses":N,"cashouts":N,"winRate":"X%","roi":"X%","totalPL":N,"avgOdds":N},"mejoresMercados":[{"mercado":"nombre","record":"W-L","pl":N,"nota":"breve"}],"peoresMercados":[{"mercado":"nombre","record":"W-L","pl":N,"nota":"breve"}],"diasSemana":[{"dia":"nombre","bets":N,"wins":N,"pl":N}],"ligas":[{"liga":"nombre","bets":N,"wins":N,"pl":N}],"rachas":"descripción","insights":["1","2","3"],"recomendaciones":["1","2","3"]}
 Sé específico. Identifica ligas por nombres de equipos.`;
   const content=await callDeepSeek([{role:"user",content:prompt}],{temperature:0.4});
-  try{return safeParseJSON(content);}catch{throw new Error("No se pudo parsear análisis: "+content);}
+  try{return safeParseJSON(content);}catch(e){throw new Error("Análisis error: "+e.message);}
 }
 
 async function aiWeekly(bets){
