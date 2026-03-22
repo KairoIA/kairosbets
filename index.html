@@ -26,6 +26,7 @@
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
   <script>
     window.storage={
       get:async function(k){try{var v=localStorage.getItem(k);return v?{value:v}:null;}catch(e){return null;}},
@@ -54,13 +55,23 @@ async function callDS(messages,{maxTokens=2048,temperature=0.3}={}){
 function fileToB64(file){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(",")[1]);r.onerror=rej;r.readAsDataURL(file);})}
 function cleanJSON(s){return s.replace(/```json\n?/g,"").replace(/```\n?/g,"").trim();}
 
-async function parseBetScreenshot(file){
-  const b64=await fileToB64(file),mime=file.type||"image/jpeg";
-  const prompt=`Analiza esta captura de pantalla de una apuesta deportiva (probablemente de Bet365).
-Extrae la información y devuélvela SOLO como JSON válido, sin texto adicional:
-{"type":"Simple" o "Combinada","desc":"Selección1 (cuota1) × Selección2 (cuota2)... nombres cortos","odds":cuota_total_decimal,"stake":cantidad_o_15,"date":"YYYY-MM-DD","notes":"info adicional"}
-La cuota total de combinada = producto de cuotas individuales. Devuelve SOLO JSON.`;
-  const content=await callDS([{role:"user",content:[{type:"image_url",image_url:{url:`data:${mime};base64,${b64}`}},{type:"text",text:prompt}]}]);
+async function parseBetScreenshot(file,onStatus){
+  onStatus&&onStatus("Extrayendo texto de la imagen...");
+  const worker=await Tesseract.createWorker("spa+eng");
+  const{data:{text}}=await worker.recognize(file);
+  await worker.terminate();
+  if(!text||text.trim().length<10)throw new Error("No se pudo leer texto de la imagen. Prueba con una captura más clara.");
+  onStatus&&onStatus("Analizando con IA...");
+  const prompt=`Este es el texto extraído por OCR de una captura de una apuesta deportiva (Bet365 u otra casa):
+
+"""
+${text}
+"""
+
+Interpreta el texto y extrae la información de la apuesta. Devuelve SOLO JSON válido:
+{"type":"Simple" o "Combinada","desc":"Selección1 (cuota1) × Selección2 (cuota2)... nombres cortos y claros","odds":cuota_total_decimal,"stake":cantidad_o_15,"date":"${new Date().toISOString().split("T")[0]}","notes":""}
+Si es combinada, la cuota total = producto de cuotas individuales. Formatea desc como: Arsenal gana (1.55) × Over 2.5 (1.90). Devuelve SOLO JSON.`;
+  const content=await callDS([{role:"user",content:prompt}]);
   try{return JSON.parse(cleanJSON(content));}catch{throw new Error("No se pudo parsear: "+content);}
 }
 
@@ -337,7 +348,8 @@ function NewBet({onBack,onSave}){
   const pl=res==="loss"?-parseFloat(stake||15):ret!==""?parseFloat((parseFloat(ret)-parseFloat(stake||15)).toFixed(2)):null;
   const valid=desc.trim()&&odds;
   const applyAI=d=>{if(d.type)setType(d.type);if(d.desc)setDesc(d.desc);if(d.odds)setOdds(String(d.odds));if(d.stake)setStake(String(d.stake));if(d.date)setDate(d.date);if(d.notes)setNotes(d.notes);setRes("pending");setMode("manual");};
-  const handlePhoto=async e=>{const f=e.target.files?.[0];if(!f)return;if(!hasAK()){setAiErr("Configura tu API key en la pestaña IA → ⚙");return;}setAiLoad(true);setAiErr(null);try{applyAI(await parseBetScreenshot(f));}catch(e){setAiErr(e.message);}setAiLoad(false);if(fileRef.current)fileRef.current.value="";};
+  const [aiStatus,setAiStatus]=useState("");
+  const handlePhoto=async e=>{const f=e.target.files?.[0];if(!f)return;if(!hasAK()){setAiErr("Configura tu API key en la pestaña IA → ⚙");return;}setAiLoad(true);setAiErr(null);setAiStatus("Preparando...");try{applyAI(await parseBetScreenshot(f,s=>setAiStatus(s)));}catch(e){setAiErr(e.message);}setAiLoad(false);setAiStatus("");if(fileRef.current)fileRef.current.value="";};
   const handleText=async()=>{if(!aiTxt.trim())return;if(!hasAK()){setAiErr("Configura tu API key en la pestaña IA → ⚙");return;}setAiLoad(true);setAiErr(null);try{applyAI(await parseBetText(aiTxt));setAiTxt("");}catch(e){setAiErr(e.message);}setAiLoad(false);};
   const save=()=>{if(!valid)return;onSave({id:"b"+Date.now(),date,type,desc,odds:parseFloat(odds),stake:parseFloat(stake||15),result:res,pl:res==="pending"?null:pl,bankroll:null,notes});setSaved(true);setTimeout(onBack,600);};
   const inp={width:"100%",padding:"11px 13px",borderRadius:7,border:"1px solid var(--border)",background:"var(--bg3)",color:"var(--text)",fontSize:14};
@@ -359,7 +371,7 @@ function NewBet({onBack,onSave}){
       <textarea value={aiTxt} onChange={e=>setAiTxt(e.target.value)} rows={3} placeholder='ej: "combinada: Nantes under 2.5 a 1.61, Man City gana FA Cup a 2.05, stake 15"' style={{...inp,resize:"none",lineHeight:1.5,marginBottom:10}}/>
       <button onClick={handleText} disabled={!aiTxt.trim()||aiLoad} style={{width:"100%",padding:10,borderRadius:8,background:!aiTxt.trim()||aiLoad?"var(--bg3)":"linear-gradient(135deg,var(--accent),var(--cyan))",border:"none",color:!aiTxt.trim()||aiLoad?"var(--muted)":"#fff",fontSize:13,fontWeight:500,cursor:!aiTxt.trim()||aiLoad?"not-allowed":"pointer"}}>{aiLoad?"Procesando...":"Rellenar con IA"}</button>
     </div></div>)}
-    {aiLoad&&(<div style={{padding:12,background:"rgba(58,111,216,0.08)",border:"1px solid rgba(58,111,216,0.2)",borderRadius:8,marginBottom:14,textAlign:"center"}}><div style={{fontSize:12,color:"var(--cyan2)"}}>DeepSeek analizando...</div><div style={{marginTop:8,height:3,background:"var(--bg3)",borderRadius:2,overflow:"hidden"}}><div style={{height:"100%",background:"linear-gradient(90deg,var(--accent),var(--cyan))",borderRadius:2,animation:"dsload 1.5s ease-in-out infinite",width:"40%"}}/></div><style>{"@keyframes dsload{0%{transform:translateX(-100%)}100%{transform:translateX(350%)}}"}</style></div>)}
+    {aiLoad&&(<div style={{padding:12,background:"rgba(58,111,216,0.08)",border:"1px solid rgba(58,111,216,0.2)",borderRadius:8,marginBottom:14,textAlign:"center"}}><div style={{fontSize:12,color:"var(--cyan2)"}}>{aiStatus||"Procesando..."}</div><div style={{marginTop:8,height:3,background:"var(--bg3)",borderRadius:2,overflow:"hidden"}}><div style={{height:"100%",background:"linear-gradient(90deg,var(--accent),var(--cyan))",borderRadius:2,animation:"dsload 1.5s ease-in-out infinite",width:"40%"}}/></div><style>{"@keyframes dsload{0%{transform:translateX(-100%)}100%{transform:translateX(350%)}}"}</style></div>)}
     {aiErr&&(<div style={{padding:"10px 13px",background:"rgba(217,83,79,0.08)",border:"1px solid rgba(217,83,79,0.2)",borderRadius:8,marginBottom:14}}><div style={{fontSize:12,color:"#d9534f",lineHeight:1.4}}>{aiErr}</div></div>)}
     <div style={{marginBottom:15}}><label style={lbl}>Fecha</label><input type="date" value={date} onChange={e=>setDate(e.target.value)} style={{...inp,fontFamily:"'DM Mono',monospace"}}/></div>
     <div style={{marginBottom:15}}><label style={lbl}>Tipo</label><div style={{display:"flex",gap:7}}>{["Simple","Combinada"].map(t=>(<button key={t} onClick={()=>setType(t)} style={{flex:1,padding:11,borderRadius:7,cursor:"pointer",border:`1px solid ${type===t?"rgba(58,111,216,0.5)":"var(--border)"}`,background:type===t?"rgba(58,111,216,0.1)":"rgba(255,255,255,0.03)",color:type===t?"var(--cyan2)":"var(--muted)",fontSize:13}}>{t}</button>))}</div></div>
