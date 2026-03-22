@@ -61,8 +61,23 @@ function cleanJSON(s){
   if(start!==-1&&end>start)s=s.substring(start,end+1);
   return s;
 }
-function fixNewlines(str){var r="";var inStr=false;var esc=false;for(var i=0;i<str.length;i++){var ch=str[i];if(esc){r+=ch;esc=false;continue;}if(ch==="\\\\"){r+=ch;esc=true;continue;}if(ch==='"'){inStr=!inStr;r+=ch;continue;}if(inStr&&ch.charCodeAt(0)===10){r+="\\\\n";continue;}if(inStr&&ch.charCodeAt(0)===13){continue;}r+=ch;}return r;}
-function safeParseJSON(s){var c=cleanJSON(s);try{return JSON.parse(c);}catch(e1){try{return JSON.parse(fixNewlines(c));}catch(e2){throw new Error(c.substring(0,200)+"...");}}}
+function safeParseJSON(s){
+  var c=cleanJSON(s);
+  try{return JSON.parse(c);}catch(e1){
+    try{
+      var fixed="",inStr=false,prev="";
+      for(var i=0;i<c.length;i++){
+        var ch=c.charAt(i),code=c.charCodeAt(i);
+        if(prev!==String.fromCharCode(92)&&ch==='"'){inStr=!inStr;fixed+=ch;}
+        else if(inStr&&code===10){fixed+=String.fromCharCode(92)+"n";}
+        else if(inStr&&code===13){/* skip */}
+        else{fixed+=ch;}
+        prev=ch;
+      }
+      return JSON.parse(fixed);
+    }catch(e2){throw new Error(c.substring(0,200)+"...");}
+  }
+}
 
 const BET_FORMAT_PROMPT=`FORMATO OBLIGATORIO para "desc" — sigue EXACTAMENTE este patrón:
 - Separar patas con " × "
