@@ -305,7 +305,7 @@ function ChartTab({ bets, onBet }) {
   );
 }
 
-function Dashboard({ bets, onNew, onBet }) {
+function Dashboard({ bets, onNew, onBet, onForceSync, syncStatus }) {
   const settled = bets.filter(b => b.result !== "pending");
   const wins = settled.filter(b => b.result === "win").length;
   const losses = settled.filter(b => b.result === "loss").length;
@@ -379,6 +379,18 @@ function Dashboard({ bets, onNew, onBet }) {
           {i < recent.length - 1 && <Sep />}
         </div>
       ))}
+      <Sep />
+      <div style={{ padding: "14px 18px 8px" }}>
+        <button onClick={onForceSync} disabled={syncStatus === "syncing"} style={{
+          width: "100%", padding: "11px", borderRadius: 8,
+          background: syncStatus === "syncing" ? "var(--bg3)" : "var(--surface)",
+          border: "1px solid var(--border)", color: syncStatus === "syncing" ? "var(--muted)" : "var(--cyan2)",
+          fontSize: 12, cursor: syncStatus === "syncing" ? "wait" : "pointer",
+          display: "flex", alignItems: "center", justifyContent: "center", gap: 6
+        }}>
+          {syncStatus === "syncing" ? "Sincronizando..." : "Subir todo al Sheet"}
+        </button>
+      </div>
       <div style={{ height: 90 }} />
       <div style={{ position: "absolute", bottom: 76, right: 18 }}>
         <button onClick={onNew} style={{ width: 50, height: 50, borderRadius: 12, background: "linear-gradient(145deg, var(--accent), var(--cyan))", border: "none", color: "#fff", fontSize: 22, fontWeight: 300, cursor: "pointer", boxShadow: "0 4px 16px rgba(58,111,216,0.3)", display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
@@ -565,33 +577,42 @@ export default function App() {
 
   useEffect(() => {
     (async () => {
-      // 1. Load from localStorage first (instant)
+      // 1. Load from localStorage (app is source of truth)
       let localBets = null;
       try {
         const s = await window.storage.get("kairosbets_v4");
         if (s?.value) localBets = JSON.parse(s.value);
       } catch {}
 
-      if (localBets && localBets.length > 0) {
-        setBets(computeBankrolls(localBets));
+      // Also check legacy storage key
+      if (!localBets) {
+        try {
+          const s = await window.storage.get("kairosbets_v3");
+          if (s?.value) localBets = JSON.parse(s.value);
+        } catch {}
       }
 
-      // 2. Fetch from Google Sheet (background)
-      try {
-        setSyncStatus("syncing");
-        const sheetBets = await fetchBetsFromSheet();
-        if (sheetBets.length > 0) {
-          const wb = computeBankrolls(sheetBets);
-          setBets(wb);
-          try { await window.storage.set("kairosbets_v4", JSON.stringify(sheetBets)); } catch {}
-          setSyncStatus("ok");
-        } else if (!localBets || localBets.length === 0) {
+      if (localBets && localBets.length > 0) {
+        // App has data — use it, don't overwrite from Sheet
+        setBets(computeBankrolls(localBets));
+        try { await window.storage.set("kairosbets_v4", JSON.stringify(localBets)); } catch {}
+        setSyncStatus("ok");
+      } else {
+        // No local data — fetch from Google Sheet as bootstrap
+        try {
+          setSyncStatus("syncing");
+          const sheetBets = await fetchBetsFromSheet();
+          if (sheetBets.length > 0) {
+            const wb = computeBankrolls(sheetBets);
+            setBets(wb);
+            try { await window.storage.set("kairosbets_v4", JSON.stringify(sheetBets)); } catch {}
+            setSyncStatus("ok");
+          } else {
+            setSyncStatus("error");
+          }
+        } catch {
           setSyncStatus("error");
-        } else {
-          setSyncStatus("ok");
         }
-      } catch {
-        setSyncStatus(localBets ? "ok" : "error");
       }
       setLoaded(true);
     })();
@@ -612,6 +633,17 @@ export default function App() {
         const betWithBankroll = wb.find(b => b.id === updatedBet.id);
         await updateBetOnSheet({ ...updatedBet, bankroll: betWithBankroll?.bankroll });
       }
+      setSyncStatus("ok");
+    } catch {
+      setSyncStatus("error");
+    }
+  }
+
+  async function forceSync() {
+    setSyncStatus("syncing");
+    try {
+      const wb = computeBankrolls(bets);
+      await syncAllToSheet(wb);
       setSyncStatus("ok");
     } catch {
       setSyncStatus("error");
@@ -646,7 +678,7 @@ export default function App() {
             <div style={{ display: "flex", width: `${TAB_ORDER.length * 100}%`, height: "100%", transform: `translateX(calc(-${idx * (100 / TAB_ORDER.length)}% + ${drag / TAB_ORDER.length}px))`, transition: drag === 0 ? "transform 0.3s cubic-bezier(0.4,0,0.2,1)" : "none", willChange: "transform" }}>
               {TAB_ORDER.map(t => (
                 <div key={t} style={{ width: `${100 / TAB_ORDER.length}%`, height: "100%", flexShrink: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-                  {t === "dashboard" && <Dashboard bets={bets} onNew={() => setView("newbet")} onBet={openBet} />}
+                  {t === "dashboard" && <Dashboard bets={bets} onNew={() => setView("newbet")} onBet={openBet} onForceSync={forceSync} syncStatus={syncStatus} />}
                   {t === "chart"     && <ChartTab  bets={bets} onBet={openBet} />}
                   {t === "history"   && <History   bets={bets} onBet={openBet} />}
                 </div>
