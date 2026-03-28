@@ -1,4 +1,4 @@
-const CACHE = "kairosbets-v8";
+const CACHE = "kairosbets-v9";
 const ASSETS = ["/", "/index.html", "/manifest.json", "/icons/icon-192.png", "/icons/icon-512.png"];
 
 self.addEventListener("install", e => {
