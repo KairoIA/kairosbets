@@ -3,18 +3,54 @@ import { useState, useEffect, useRef, useCallback } from "react";
 const LOGO = "/icons/icon-192.png";
 const INITIAL_BANKROLL = 15;
 
-const HISTORICAL = [
-  { id:"h1",  date:"2026-02-24", type:"Combinada", desc:"Burton gana (3.20) × Bradford empate (3.50) × Inter empate descanso (3.20)", odds:35.84, stake:15, result:"cashout", pl:59.16, notes:"Cash out anticipado." },
-  { id:"h2",  date:"2026-02-25", type:"Simple",    desc:"Monaco DC X2 vs PSG", odds:2.20, stake:15, result:"win", pl:18.00, notes:"Monaco 0-1 HT. PSG empató 2-2." },
-  { id:"h3",  date:"2026-02-26", type:"Combinada", desc:"Jagiellonia X2 (2.50) × Fenerbahce X2 (2.30)", odds:5.75, stake:15, result:"win", pl:68.47, notes:"Jagiellonia 4-2. Fenerbahce 2-1 Forest." },
-  { id:"h4",  date:"2026-02-28", type:"Combinada", desc:"Liverpool BTTS (1.61) × Barcelona +3.5 (1.66) × Man City gana (1.66)", odds:4.44, stake:15, result:"win", pl:50.94, notes:"Todas ✅" },
-  { id:"h5",  date:"2026-03-01", type:"Combinada", desc:"Arsenal gana Chelsea (1.55) × Over 2.5 Girona/Celta (1.90)", odds:2.945, stake:15, result:"win", pl:29.17, notes:"Arsenal 2-1 ✅ | Celta +2.5 ✅" },
-  { id:"h6",  date:"2026-03-03", type:"Combinada", desc:"Everton gana (1.61) × Liverpool gana (1.44) × Over 2.5 Como/Inter (2.25)", odds:5.22, stake:15, result:"loss", pl:-15.00, notes:"Wolves 2-1 Liverpool ❌ | Como 0-0 Inter ❌" },
-  { id:"h7",  date:"2026-03-04", type:"Combinada", desc:"Aston Villa DC X2 (1.57) × Arsenal gana Brighton (1.44) × Man City gana Forest (1.57)", odds:3.55, stake:15, result:"loss", pl:-15.00, notes:"Villa 1-4 Chelsea ❌ | Man City 2-2 Forest ❌" },
-  { id:"h8",  date:"2026-03-05", type:"Combinada", desc:"Lyon gana Coupe de France (2.55) × Over 2.5 (1.72)", odds:4.00, stake:15, result:"loss", pl:-15.00, notes:"Lyon 2-2 Lens al 90\' ❌" },
-  { id:"h9",  date:"2026-03-06", type:"Combinada", desc:"Elversberg gana (1.83) × Bayern HT Local (1.44) × Nancy DC X2 (1.44)", odds:3.80, stake:15, result:"cashout", pl:38.22, notes:"Cash out anticipado. Las 3 patas se dieron ✅" },
-  { id:"h10", date:"2026-03-07", type:"Combinada", desc:"Nantes U2.5 (1.61) × Man City gana FA Cup (2.05) × Swansea U2.5 (1.72)", odds:5.677, stake:15, result:"pending", pl:null, notes:"" },
-];
+const GSHEET_API = "https://script.google.com/macros/s/AKfycbxe8FBH_jA03Nj2QFA3KtL8IANcQaL3d--7PaT-aBBp7r1nYD8IxJGMJdifSVvHlGMMdQ/exec";
+
+// --- Google Sheets sync layer ---
+async function fetchBetsFromSheet() {
+  const res = await fetch(GSHEET_API + "?action=getBets");
+  const data = await res.json();
+  return (data.bets || []).map(b => ({
+    id: b.id,
+    date: b.date,
+    type: b.type || "Combinada",
+    desc: b.desc || "",
+    odds: Number(b.odds) || 0,
+    stake: Number(b.stake) || 15,
+    result: b.result || "pending",
+    pl: b.pl === "" || b.pl === null ? null : Number(b.pl),
+    notes: b.notes || "",
+  }));
+}
+
+async function syncBetToSheet(bet) {
+  try {
+    await fetch(GSHEET_API, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain" },
+      body: JSON.stringify({ action: "addBet", bet }),
+    });
+  } catch (e) { console.warn("Sheet sync failed:", e); }
+}
+
+async function updateBetOnSheet(bet) {
+  try {
+    await fetch(GSHEET_API, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain" },
+      body: JSON.stringify({ action: "updateBet", bet }),
+    });
+  } catch (e) { console.warn("Sheet update failed:", e); }
+}
+
+async function syncAllToSheet(bets) {
+  try {
+    await fetch(GSHEET_API, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain" },
+      body: JSON.stringify({ action: "syncAll", bets }),
+    });
+  } catch (e) { console.warn("Sheet full sync failed:", e); }
+}
 
 function getResultStyle(result, pl) {
   if (result === "win")    return { text: "#5cb85c", bg: "rgba(92,184,92,0.07)",   border: "rgba(92,184,92,0.18)",   label: "Ganada",    icon: "✓" };
@@ -112,7 +148,17 @@ function RDot({ result, pl, size = 28 }) {
   </div>;
 }
 
-function Header({ bets }) {
+function SyncDot({ status }) {
+  const colors = { idle: "var(--muted)", syncing: "var(--cyan)", ok: "#5cb85c", error: "#d9534f" };
+  const labels = { idle: "", syncing: "Sync...", ok: "Sync", error: "Offline" };
+  return <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+    <div style={{ width: 6, height: 6, borderRadius: 3, background: colors[status] || colors.idle, animation: status === "syncing" ? "pulse 1s infinite" : "none" }} />
+    {status !== "idle" && <span style={{ fontSize: 9, color: colors[status], letterSpacing: 0.3, textTransform: "uppercase" }}>{labels[status]}</span>}
+    <style>{`@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }`}</style>
+  </div>;
+}
+
+function Header({ bets, syncStatus }) {
   const pending = bets.filter(b => b.result === "pending").length;
   return <div style={{
     display: "flex", alignItems: "center", justifyContent: "space-between",
@@ -128,7 +174,10 @@ function Header({ bets }) {
         <div style={{ fontSize: 10, color: "var(--muted)", letterSpacing: 1.2, textTransform: "uppercase" }}>Value Tracker</div>
       </div>
     </div>
-    {pending > 0 && <Badge color="var(--cyan)" border="rgba(74,144,196,0.3)">{pending} en juego</Badge>}
+    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+      <SyncDot status={syncStatus} />
+      {pending > 0 && <Badge color="var(--cyan)" border="rgba(74,144,196,0.3)">{pending} en juego</Badge>}
+    </div>
   </div>;
 }
 
@@ -509,25 +558,64 @@ const TAB_ORDER = ["dashboard", "chart", "history"];
 export default function App() {
   const [bets, setBets] = useState([]);
   const [loaded, setLoaded] = useState(false);
+  const [syncStatus, setSyncStatus] = useState("idle"); // idle | syncing | ok | error
   const [tab, setTab] = useState("dashboard");
   const [view, setView] = useState("main");
   const [sel, setSel] = useState(null);
 
   useEffect(() => {
     (async () => {
+      // 1. Load from localStorage first (instant)
+      let localBets = null;
       try {
-        const s = await window.storage.get("kairosbets_v3");
-        setBets(s?.value ? computeBankrolls(JSON.parse(s.value)) : computeBankrolls(HISTORICAL));
-        if (!s?.value) await window.storage.set("kairosbets_v3", JSON.stringify(computeBankrolls(HISTORICAL)));
-      } catch { setBets(computeBankrolls(HISTORICAL)); }
+        const s = await window.storage.get("kairosbets_v4");
+        if (s?.value) localBets = JSON.parse(s.value);
+      } catch {}
+
+      if (localBets && localBets.length > 0) {
+        setBets(computeBankrolls(localBets));
+      }
+
+      // 2. Fetch from Google Sheet (background)
+      try {
+        setSyncStatus("syncing");
+        const sheetBets = await fetchBetsFromSheet();
+        if (sheetBets.length > 0) {
+          const wb = computeBankrolls(sheetBets);
+          setBets(wb);
+          try { await window.storage.set("kairosbets_v4", JSON.stringify(sheetBets)); } catch {}
+          setSyncStatus("ok");
+        } else if (!localBets || localBets.length === 0) {
+          setSyncStatus("error");
+        } else {
+          setSyncStatus("ok");
+        }
+      } catch {
+        setSyncStatus(localBets ? "ok" : "error");
+      }
       setLoaded(true);
     })();
   }, []);
 
-  async function persist(raw) {
+  async function persist(raw, newBet, updatedBet) {
     const wb = computeBankrolls(raw);
     setBets(wb);
-    try { await window.storage.set("kairosbets_v3", JSON.stringify(wb)); } catch {}
+    try { await window.storage.set("kairosbets_v4", JSON.stringify(raw)); } catch {}
+
+    // Sync to Google Sheet in background
+    setSyncStatus("syncing");
+    try {
+      if (newBet) {
+        const betWithBankroll = wb.find(b => b.id === newBet.id);
+        await syncBetToSheet({ ...newBet, bankroll: betWithBankroll?.bankroll });
+      } else if (updatedBet) {
+        const betWithBankroll = wb.find(b => b.id === updatedBet.id);
+        await updateBetOnSheet({ ...updatedBet, bankroll: betWithBankroll?.bankroll });
+      }
+      setSyncStatus("ok");
+    } catch {
+      setSyncStatus("error");
+    }
   }
 
   const touchStart = useRef(null);
@@ -552,7 +640,7 @@ export default function App() {
     <>
       <style>{CSS}</style>
       <div style={{ height: "100%", maxWidth: 480, margin: "0 auto", background: "var(--bg)", display: "flex", flexDirection: "column", position: "relative", overflow: "hidden" }}>
-        <Header bets={bets} />
+        <Header bets={bets} syncStatus={syncStatus} />
         {view === "main" && (
           <div style={{ flex: 1, overflow: "hidden", position: "relative", paddingBottom: 58 }} onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
             <div style={{ display: "flex", width: `${TAB_ORDER.length * 100}%`, height: "100%", transform: `translateX(calc(-${idx * (100 / TAB_ORDER.length)}% + ${drag / TAB_ORDER.length}px))`, transition: drag === 0 ? "transform 0.3s cubic-bezier(0.4,0,0.2,1)" : "none", willChange: "transform" }}>
@@ -568,12 +656,12 @@ export default function App() {
         )}
         {view === "detail" && sel && (
           <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-            <Detail bet={sel} onBack={() => { setView("main"); setSel(null); }} onUpdate={u => { const nb = [...bets]; nb[nb.findIndex(x => x.id === u.id)] = u; persist(nb); }} />
+            <Detail bet={sel} onBack={() => { setView("main"); setSel(null); }} onUpdate={u => { const nb = [...bets]; nb[nb.findIndex(x => x.id === u.id)] = u; persist(nb, null, u); }} />
           </div>
         )}
         {view === "newbet" && (
           <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-            <NewBet onBack={() => setView("main")} onSave={b => { persist([...bets, b]); setView("main"); }} />
+            <NewBet onBack={() => setView("main")} onSave={b => { persist([...bets, b], b, null); setView("main"); }} />
           </div>
         )}
         {view === "main" && <TabBar active={tab} onChange={setTab} />}
