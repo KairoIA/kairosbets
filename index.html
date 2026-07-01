@@ -23,9 +23,13 @@
     <p>Cargando...</p>
   </div>
   <div id="root"></div>
-  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <!-- PINNED to Babel 7: v8 flipped preset-react to the automatic JSX runtime,
+       which injects `import {jsx} from "react/jsx-runtime"` into the compiled
+       inline script (classic <script>) → "Cannot use import statement outside a
+       module" → window.App undefined → blank screen. Keep it pinned. -->
+  <script src="https://unpkg.com/@babel/standalone@7.29.7/babel.min.js"></script>
   <script>
     window.storage={
       get:async function(k){try{var v=localStorage.getItem(k);return v?{value:v}:null;}catch(e){return null;}},
@@ -742,7 +746,7 @@ window.App=App;
     });
     if('serviceWorker' in navigator){
       // Force update: clear old caches, re-register SW
-      caches.keys().then(function(keys){keys.forEach(function(k){if(k!=='kairosbets-v9')caches.delete(k);});});
+      caches.keys().then(function(keys){keys.forEach(function(k){if(k!=='kairosbets-v10')caches.delete(k);});});
       navigator.serviceWorker.register('public/sw.js',{updateViaCache:'none'}).catch(function(){});
     }
   </script>
