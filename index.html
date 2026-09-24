@@ -40,16 +40,19 @@
 const{useState,useEffect,useRef,useCallback}=React;
 
 // === DeepSeek (texto) + Gemini (vision) ===
-const DS_KEY="sk-e5e32b90703245cc904f5d5ccff47ea1";
+const DS_KEY_STORE="kairosbets_deepseek_key";
+var getDSKey=function(){return localStorage.getItem(DS_KEY_STORE)||"";};
+var setDSKey=function(k){localStorage.setItem(DS_KEY_STORE,k.trim());};
 const GEMINI_MODEL="gemini-2.5-flash";
 const AI_KEY_STORE="kairosbets_gemini_key";
 var getGeminiKey=function(){return localStorage.getItem(AI_KEY_STORE)||"";};
 var setAK=function(k){localStorage.setItem(AI_KEY_STORE,k.trim());};
-var hasAK=function(){return !!(DS_KEY&&getGeminiKey());};
+var hasAK=function(){return !!(getDSKey()&&getGeminiKey());};
 
 async function callDeepSeek(messages,opts){
   var o=opts||{};var temp=o.temperature||0.3;
-  var res=await fetch("https://api.deepseek.com/v1/chat/completions",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+DS_KEY},body:JSON.stringify({model:"deepseek-chat",messages:messages,temperature:temp,max_tokens:4096})});
+  var dsKey=getDSKey();if(!dsKey)throw new Error("API key de DeepSeek no configurada. Ve a IA → ⚙ API");
+  var res=await fetch("https://api.deepseek.com/v1/chat/completions",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+dsKey},body:JSON.stringify({model:"deepseek-chat",messages:messages,temperature:temp,max_tokens:4096})});
   if(!res.ok){var err=await res.text();throw new Error("DeepSeek error "+res.status+": "+err);}
   var data=await res.json();
   return data.choices[0].message.content;
@@ -478,18 +481,23 @@ function NewBet({onBack,onSave}){
 // === Settings Screen ===
 function SettingsView({onBack}){
   const [key,setKey]=useState(getGeminiKey()),[saved,setSaved]=useState(false),[vis,setVis]=useState(false);
-  const doSave=()=>{setAK(key);setSaved(true);setTimeout(()=>setSaved(false),1500);};
+  const [dsKey,setDsKeyInput]=useState(getDSKey()),[dsVis,setDsVis]=useState(false);
+  const doSave=()=>{setAK(key);setDSKey(dsKey);setSaved(true);setTimeout(()=>setSaved(false),1500);};
   const inp={width:"100%",padding:"12px 13px",borderRadius:8,border:"1px solid var(--border)",background:"var(--bg3)",color:"var(--text)",fontSize:13,fontFamily:"'DM Mono',monospace"};
   return(<div style={{flex:1,overflow:"auto",padding:"14px 18px 80px"}}>
     <button onClick={onBack} style={{background:"none",border:"none",color:"var(--muted)",fontSize:13,cursor:"pointer",marginBottom:18,display:"flex",alignItems:"center",gap:5}}>← Volver</button>
     <div style={{fontSize:17,fontWeight:600,marginBottom:6}}>Configuración IA</div>
     <div style={{fontSize:12,color:"var(--muted)",marginBottom:20,lineHeight:1.5}}>DeepSeek para análisis y reportes. Gemini para capturas.</div>
-    <div style={{padding:"14px",background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:10,marginBottom:14}}>
-      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
-        <div style={{width:8,height:8,borderRadius:"50%",background:"#5cb85c",flexShrink:0}}/>
-        <span style={{fontSize:13,color:"#5cb85c"}}>DeepSeek conectado</span>
+    <div style={{padding:"16px 14px",background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:10,marginBottom:14}}>
+      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
+        <div style={{width:8,height:8,borderRadius:"50%",background:getDSKey()?"#5cb85c":"#d9534f",flexShrink:0}}/>
+        <span style={{fontSize:13,color:getDSKey()?"#5cb85c":"var(--muted)"}}>{getDSKey()?"DeepSeek conectado":"DeepSeek no configurado"}</span>
       </div>
-      <div style={{fontSize:11,color:"var(--muted)",lineHeight:1.5}}>Análisis, reporte semanal y texto IA. Key integrada.</div>
+      <div style={{fontSize:11,color:"var(--muted)",letterSpacing:1.4,textTransform:"uppercase",marginBottom:8}}>API Key de DeepSeek (análisis y texto)</div>
+      <div style={{position:"relative"}}><input type={dsVis?"text":"password"} value={dsKey} onChange={e=>setDsKeyInput(e.target.value)} placeholder="sk-..." style={inp}/>
+        <button onClick={()=>setDsVis(!dsVis)} style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",color:"var(--muted)",fontSize:11,cursor:"pointer",padding:"4px 6px",letterSpacing:0.3}}>{dsVis?"OCULTAR":"VER"}</button>
+      </div>
+      <div style={{fontSize:11,color:"var(--muted)",marginTop:10,lineHeight:1.5}}>Análisis, reporte semanal y captura por texto. Se guarda en este dispositivo.</div>
     </div>
     <div style={{padding:"16px 14px",background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:10,marginBottom:20}}>
       <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
@@ -626,7 +634,7 @@ function AITab({bets,onSettings}){
   const [aiMode,setAiMode]=useState("analysis"),[loading,setLoading]=useState(false),[error,setError]=useState(null),[aData,setAData]=useState(null),[wData,setWData]=useState(null);
   const settled=bets.filter(b=>b.result!=="pending");
   const run=async(type)=>{
-    if(!DS_KEY){setError("DeepSeek no configurado");return;}
+    if(!getDSKey()){setError("Configura tu API key de DeepSeek en la pestaña IA → ⚙");return;}
     setLoading(true);setError(null);
     try{if(type==="analysis")setAData(await aiAnalyze(bets));else setWData(await aiWeekly(bets));}catch(e){setError(e.message);}
     setLoading(false);
@@ -746,7 +754,7 @@ window.App=App;
     });
     if('serviceWorker' in navigator){
       // Force update: clear old caches, re-register SW
-      caches.keys().then(function(keys){keys.forEach(function(k){if(k!=='kairosbets-v10')caches.delete(k);});});
+      caches.keys().then(function(keys){keys.forEach(function(k){if(k!=='kairosbets-v11')caches.delete(k);});});
       navigator.serviceWorker.register('public/sw.js',{updateViaCache:'none'}).catch(function(){});
     }
   </script>
