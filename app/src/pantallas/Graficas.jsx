@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { Grafica, Insignia, Linea, Sep } from "../piezas/comunes.jsx";
+import { Grafica, Insignia, Linea, masmenos } from "../piezas/comunes.jsx";
 import { estado } from "../datos/calculos.js";
-import { euros, signo, pct, fechaCorta } from "../datos/util.js";
+import { pct, fechaCorta } from "../datos/util.js";
 
 export function PestanaGrafica({ temporada, bets, r, onBet }) {
   const [sel, setSel] = useState(null);
@@ -9,41 +9,38 @@ export function PestanaGrafica({ temporada, bets, r, onBet }) {
   const elegida = sel && bets.find((b) => b.id === sel);
   return (
     <div className="scroll">
-      <div className="pad">
-        <div className="fila" style={{ flexWrap: "wrap", gap: 6 }}>
-          <Insignia c="cashout">{euros(r.bankroll)}</Insignia>
-          <Insignia c={r.neto >= 0 ? "win" : "loss"}>{signo(r.neto)} neto</Insignia>
-          <Insignia c={r.roi >= 0 ? "pending" : "loss"}>ROI {pct(r.roi, 1)}</Insignia>
-          {r.cuotaMedia != null && <Insignia>cuota media {r.cuotaMedia.toFixed(2)}</Insignia>}
+      <div className="heroe" style={{ paddingTop: 14 }}>
+        <div className="tres" style={{ marginTop: 0, borderTop: 0 }}>
+          <div><span className="etiqueta">Bankroll</span><b className="ambar">{r.bankroll.toFixed(2)}</b></div>
+          <div><span className="etiqueta">ROI</span><b className={r.roi > 0 ? "pos" : r.roi < 0 ? "neg" : ""}>{r.roi == null ? "—" : pct(r.roi, 1)}</b></div>
+          <div><span className="etiqueta">Cuota media</span><b>{r.cuotaMedia == null ? "—" : r.cuotaMedia.toFixed(2)}</b></div>
         </div>
       </div>
-      <Sep />
       <div className="pad">
         <div className="etiqueta" style={{ marginBottom: 12 }}>Bankroll · toca un punto</div>
         <Grafica bets={bets} inicial={temporada.bankrollInicial} sel={sel} onPunto={(p) => setSel(sel === p.id ? null : p.id)} />
       </div>
       {elegida && (
-        <div className="pad" style={{ paddingTop: 0 }}>
-          <button className={`caja r-${estado(elegida).clave}`} style={{ width: "100%", textAlign: "left", borderColor: "color-mix(in srgb, var(--c) 30%, transparent)" }} onClick={() => onBet(elegida)}>
+        <div style={{ padding: "0 18px 14px" }}>
+          <button className={`juego r-${estado(elegida).clave}`} style={{ margin: 0, width: "100%", textAlign: "left", borderLeftColor: "var(--c)", padding: "11px 12px" }} onClick={() => onBet(elegida)}>
             <div className="entre" style={{ marginBottom: 6 }}>
-              <span className="tenue" style={{ fontSize: 11 }}>{fechaCorta(elegida.date)} · {elegida.type}</span>
+              <span className="etiqueta">{fechaCorta(elegida.date)} · {elegida.type}</span>
               <Insignia c={estado(elegida).clave}>{estado(elegida).texto}</Insignia>
             </div>
-            <div style={{ fontSize: 13, lineHeight: 1.4, marginBottom: 8 }}>{elegida.desc}</div>
+            <div className="desc" style={{ fontSize: 11.5, lineHeight: 1.45, marginBottom: 8 }}>{elegida.desc}</div>
             <div className="entre">
-              <div className="fila"><Insignia>@{elegida.odds}</Insignia><Insignia>{elegida.stake} €</Insignia></div>
-              <span className="mono" style={{ color: "var(--c)" }}>{signo(elegida.pl)}</span>
+              <span className="etiqueta">@{Number(elegida.odds).toFixed(2)} · {elegida.stake} € · bankroll {elegida.bankroll?.toFixed(2)}</span>
+              <b className="rotulo" style={{ fontSize: 22, color: "var(--c)" }}>{masmenos(elegida.pl)}</b>
             </div>
           </button>
         </div>
       )}
-      <Sep />
-      <div className="pad" style={{ paddingBottom: 4 }}><div className="etiqueta">Todas las liquidadas</div></div>
-      {[...hechas].reverse().map((b, i) => (
-        <div key={b.id}>
-          <Linea bet={b} conBank sel={sel === b.id} onClick={() => setSel(sel === b.id ? null : b.id)} />
-          {i < hechas.length - 1 && <Sep />}
-        </div>
+      <div className="seccion" style={{ borderBottom: "1px solid var(--linea)" }}>
+        <span className="etiqueta">Liquidadas · {hechas.length}</span>
+        <span className="etiqueta">P&amp;L · bankroll</span>
+      </div>
+      {[...hechas].reverse().map((b) => (
+        <Linea key={b.id} bet={b} conBank sel={sel === b.id} onClick={() => setSel(sel === b.id ? null : b.id)} />
       ))}
       <div className="hueco" />
     </div>
@@ -70,26 +67,19 @@ export function PestanaHistorial({ bets, onBet }) {
   return (
     <div className="scroll">
       <div className="pad" style={{ paddingBottom: 10 }}>
-        <input className="entrada" value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar equipo, mercado, nota…" />
+        <input className="entrada" value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar equipo, mercado, nota…" aria-label="Buscar" />
       </div>
       <div className="filtros">
         {FILTROS.map(([id, txt]) => (
           <button key={id} className={filtro === id ? "activo" : ""} onClick={() => setFiltro(id)}>{txt}</button>
         ))}
       </div>
-      <Sep />
-      <div className="pad entre" style={{ paddingTop: 10, paddingBottom: 10 }}>
+      <div className="seccion" style={{ borderBottom: "1px solid var(--linea)" }}>
         <span className="etiqueta">{lista.length} apuestas</span>
-        <span className={`mono ${neto >= 0 ? "pos" : "neg"}`} style={{ fontSize: 13 }}>{signo(neto)}</span>
+        <span className={`rotulo ${neto > 0 ? "pos" : neto < 0 ? "neg" : ""}`} style={{ fontSize: 20, fontWeight: 700 }}>{masmenos(neto)}</span>
       </div>
-      <Sep />
-      {lista.map((b, i) => (
-        <div key={b.id}>
-          <Linea bet={b} conBank onClick={() => onBet(b)} />
-          {i < lista.length - 1 && <Sep />}
-        </div>
-      ))}
-      {!lista.length && <div className="pad tenue" style={{ textAlign: "center", padding: 30 }}>Nada con ese filtro</div>}
+      {lista.map((b) => <Linea key={b.id} bet={b} conBank onClick={() => onBet(b)} />)}
+      {!lista.length && <div className="pad tenue" style={{ textAlign: "center", padding: 30, fontSize: 11 }}>Nada con ese filtro</div>}
       <div className="hueco" />
     </div>
   );

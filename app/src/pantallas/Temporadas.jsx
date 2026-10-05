@@ -16,10 +16,10 @@ export function ListaTemporadas({ temporadas, apuestas, viendo, onVer, onVolver,
         return (
           <button key={t.id} className={`temporada ${actual ? "actual" : ""}`} onClick={() => onVer(t.id)}>
             <div className="entre">
-              <b style={{ fontSize: 15, fontWeight: 600 }}>{t.nombre}</b>
+              <b className="nombre-t">{t.nombre}</b>
               {actual ? <Insignia c="pending">en curso</Insignia> : <Insignia c="cashout">archivo</Insignia>}
             </div>
-            <div className="tenue" style={{ fontSize: 12, marginTop: 4 }}>
+            <div className="etiqueta" style={{ marginTop: 6 }}>
               {fechaCorta(t.inicio)} → {t.fin ? fechaCorta(t.fin) : "hoy"} · {r.total} apuestas{viendo === t.id ? " · la estás viendo" : ""}
             </div>
             <div className="cifras">

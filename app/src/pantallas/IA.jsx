@@ -12,25 +12,25 @@ function Analisis({ d }) {
     (lista || []).map((m, i) => (
       <div key={i} className={`bloque ${clase}`}>
         <div className="entre" style={{ marginBottom: 4 }}>
-          <b className="ellipsis" style={{ fontWeight: 500 }}>{m.mercado}</b>
+          <b className="ellipsis" style={{ fontWeight: 500, fontFamily: "var(--mono)", fontSize: 12 }}>{m.mercado}</b>
           <div className="fila" style={{ gap: 4 }}><Insignia>{m.record}</Insignia><Insignia c={num(m.pl) >= 0 ? "win" : "loss"}>{eur(m.pl)}</Insignia></div>
         </div>
-        <div className="tenue" style={{ fontSize: 12 }}>{m.nota}</div>
+        <div className="tenue" style={{ fontSize: 12.5 }}>{m.nota}</div>
       </div>
     ));
   return (
     <div>
-      <div className="caja" style={{ fontSize: 14, lineHeight: 1.6 }}>{d.resumen}</div>
+      <div className="bloque consejo" style={{ marginBottom: 12 }}>{d.resumen}</div>
       <div className="rejilla3">
         <div className="stat"><b className="pos">{s.winRate}</b><span>Acierto</span></div>
-        <div className="stat"><b style={{ color: "var(--cian)" }}>{s.roi}</b><span>ROI</span></div>
+        <div className="stat"><b className="ambar">{s.roi}</b><span>ROI</span></div>
         <div className="stat"><b className={num(s.totalPL) >= 0 ? "pos" : "neg"}>{eur(s.totalPL)}</b><span>P&L</span></div>
       </div>
       <div className="rejilla4">
         <div className="stat"><b>{s.totalBets}</b><span>Total</span></div>
         <div className="stat"><b className="pos">{s.wins}</b><span>Ganadas</span></div>
         <div className="stat"><b className="neg">{s.losses}</b><span>Perdidas</span></div>
-        <div className="stat"><b style={{ color: "var(--oro)" }}>{num(s.avgOdds).toFixed(2)}</b><span>Cuota media</span></div>
+        <div className="stat"><b className="ambar">{num(s.avgOdds).toFixed(2)}</b><span>Cuota media</span></div>
       </div>
       <div className="subtitulo">Mejores mercados</div>
       <Mercados lista={d.mejoresMercados} clase="bien" />
@@ -79,20 +79,20 @@ function Cronica({ d }) {
         <div className="min" style={{ letterSpacing: 4 }}>El semanario del apostador</div>
       </div>
       <h3>{d.titular}</h3>
-      <p style={{ textAlign: "center", fontStyle: "italic", color: "rgba(200,180,130,0.75)" }}>{d.subtitulo}</p>
-      <div className="entre" style={{ justifyContent: "center", gap: 18, padding: "10px 0", borderTop: "1px solid rgba(255,255,255,0.08)", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+      <p style={{ textAlign: "center", fontStyle: "italic" }}>{d.subtitulo}</p>
+      <div className="cifras-p">
         {[["Apuestas", b.apuestas, ""], ["Ganadas", b.ganadas, "pos"], ["Perdidas", b.perdidas, "neg"], ["P&L", eur(b.pl), num(b.pl) >= 0 ? "pos" : "neg"]].map(([l, v, c]) => (
-          <div key={l} style={{ textAlign: "center" }}><div className={`mono ${c}`} style={{ fontSize: 17 }}>{v ?? 0}</div><div className="min">{l}</div></div>
+          <div key={l} style={{ textAlign: "center" }}><div className={c} style={{ font: "700 22px var(--rotulo)" }}>{v ?? 0}</div><div className="min">{l}</div></div>
         ))}
       </div>
-      <div className="seccion">Crónica</div>
+      <div className="seccion-p">Crónica</div>
       {parrafos.map((p, i) => <p key={i}>{p}</p>)}
-      <div className="seccion" style={{ color: "var(--gana)" }}>Mejor apuesta</div>
+      <div className="seccion-p">Mejor apuesta</div>
       <p>{d.mejorApuesta}</p>
-      <div className="seccion" style={{ color: "var(--pierde)" }}>Peor momento</div>
+      <div className="seccion-p">Peor momento</div>
       <p>{d.peorApuesta}</p>
-      <div className="leccion"><div className="seccion" style={{ marginTop: 0 }}>Lección de la semana</div>{d.leccion}</div>
-      <div className="seccion" style={{ color: "var(--cian)" }}>Perspectiva</div>
+      <div className="leccion"><div className="seccion-p" style={{ marginTop: 0 }}>Lección de la semana</div>{d.leccion}</div>
+      <div className="seccion-p">Perspectiva</div>
       <p>{d.perspectiva}</p>
     </div>
   );
@@ -137,7 +137,7 @@ export default function PestanaIA({ bets, onAjustes }) {
             </button>
           </div>
         )}
-        {estado.cargando && <div style={{ textAlign: "center", padding: "30px 0" }}><div style={{ color: "var(--cian-2)" }}>Pensando con DeepSeek…</div><div className="cargando" /></div>}
+        {estado.cargando && <div style={{ textAlign: "center", padding: "30px 0" }}><div className="etiqueta ambar">Pensando con DeepSeek…</div><div className="cargando" /></div>}
         {estado.error && <div className="error">{estado.error}</div>}
         {actual && !estado.cargando && (
           <>

@@ -62,7 +62,7 @@ export default function Ajustes({ temporada, sync, onVolver, onSubirTodo, onRecu
 
       <div className="caja">
         <div className="entre" style={{ marginBottom: 10 }}>
-          <b style={{ fontWeight: 600 }}>Copia en la Hoja de Google</b>
+          <b className="caja-titulo" style={{ marginBottom: 0 }}>Copia en la Hoja</b>
           <span className={`sync ${sync.estado}`}><i />{sync.texto}</span>
         </div>
         <div className="explica" style={{ marginBottom: 12 }}>
@@ -81,14 +81,14 @@ export default function Ajustes({ temporada, sync, onVolver, onSubirTodo, onRecu
           <button className="boton suave" disabled={!urlHoja()} onClick={() => onSubirTodo().then((r) => setPrueba(r.ok ? { ok: "Todo copiado." } : { error: r.error }))}>Subir todo ahora</button>
         </div>
         {urlHoja() && (
-          <button className="tenue" style={{ fontSize: 12, marginTop: 12, textDecoration: "underline" }} onClick={() => (recuperar ? (setRecuperar(false), onRecuperar().then(setMsg)) : setRecuperar(true))}>
+          <button className="enlace" style={{ marginTop: 12 }} onClick={() => (recuperar ? (setRecuperar(false), onRecuperar().then(setMsg)) : setRecuperar(true))}>
             {recuperar ? "Pulsa otra vez: lo de la Hoja sustituye a lo de este móvil" : "Recuperar desde la Hoja (móvil nuevo o datos perdidos)"}
           </button>
         )}
       </div>
 
       <div className="caja">
-        <b style={{ fontWeight: 600, display: "block", marginBottom: 12 }}>Copia en un archivo</b>
+        <b className="caja-titulo">Copia en un archivo</b>
         <div className="explica" style={{ marginBottom: 12 }}>Todas las temporadas en un archivo, por si acaso. Guárdalo en Drive o mándatelo por Telegram.</div>
         {msg?.error && <div className="error">{msg.error}</div>}
         {msg?.ok && <div className="ok-msg">{msg.ok}</div>}
@@ -101,7 +101,7 @@ export default function Ajustes({ temporada, sync, onVolver, onSubirTodo, onRecu
 
       {temporada && (
         <div className="caja">
-          <b style={{ fontWeight: 600, display: "block", marginBottom: 12 }}>Temporada en curso</b>
+          <b className="caja-titulo">Temporada en curso</b>
           <div className="dos campo">
             <div><span className="etiqueta" style={{ display: "block", marginBottom: 8 }}>Nombre</span><input className="entrada" value={nombre} onChange={(e) => setNombre(e.target.value)} /></div>
             <div><span className="etiqueta" style={{ display: "block", marginBottom: 8 }}>Stake habitual €</span><input className="entrada mono" type="number" inputMode="decimal" value={stake} onChange={(e) => setStake(e.target.value)} /></div>
@@ -112,7 +112,7 @@ export default function Ajustes({ temporada, sync, onVolver, onSubirTodo, onRecu
       )}
 
       <div className="caja">
-        <b style={{ fontWeight: 600, display: "block", marginBottom: 12 }}>IA</b>
+        <b className="caja-titulo">IA</b>
         <Clave etiqueta="Clave de DeepSeek" valor={ds} set={setDs} placeholder="sk-…" ayuda="Análisis, crónica y apuestas escritas." />
         <Clave etiqueta="Clave de Gemini" valor={gem} set={setGem} placeholder="AIza…" ayuda="Leer capturas de apuestas." />
         <button className={`boton ${clavesOk ? "hecho" : ""}`} onClick={() => { ponerClaves(ds, gem); setClavesOk(true); setTimeout(() => setClavesOk(false), 1500); }}>{clavesOk ? "✓ Guardadas" : "Guardar claves"}</button>

@@ -189,15 +189,15 @@ export default function App() {
     <div className="app">
       <header className="cabecera">
         <div className="marca">
-          <img src={LOGO} width="38" height="38" alt="" />
+          <img src={LOGO} width="32" height="32" alt="" />
           <div>
-            <div className="nombre"><b>Kairos</b>Bets</div>
+            <div className="nombre">KAIROSBETS</div>
             <button className="chip-temporada" onClick={() => setVista({ tipo: "temporadas" })}>{temporada.nombre}</button>
           </div>
         </div>
         <div className="fila" style={{ gap: 12 }}>
           <button className={`sync ${sync.estado}`} onClick={() => setVista({ tipo: "ajustes" })} title={sync.error || ""}><i />{sync.texto}</button>
-          <button className="tenue" style={{ fontSize: 17 }} onClick={() => setVista({ tipo: "ajustes" })} aria-label="Ajustes">⚙</button>
+          <button className="engranaje" onClick={() => setVista({ tipo: "ajustes" })} aria-label="Ajustes">⚙</button>
         </div>
       </header>
       {archivo && !vista && (
@@ -226,7 +226,7 @@ export default function App() {
         <nav className="barra">
           {PESTANAS.map((p) => (
             <button key={p.id} className={tab === p.id ? "activa" : ""} onClick={() => setTab(p.id)}>
-              <span className="ico">{p.ico}</span><span className="txt">{p.txt}</span>
+              {p.txt}
             </button>
           ))}
         </nav>

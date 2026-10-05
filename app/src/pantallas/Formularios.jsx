@@ -29,7 +29,7 @@ function Retorno({ resultado, retorno, setRetorno, pl, cuota, stake }) {
       <span className="etiqueta">Lo que te devolvió la casa (€)</span>
       <input className="entrada grande" type="number" inputMode="decimal" step="0.01" value={retorno} onChange={(e) => setRetorno(e.target.value)} placeholder={resultado === "win" ? lleno : "ej: 22.40"} />
       {resultado === "win" && retorno === "" && lleno && (
-        <button className="tenue" style={{ fontSize: 12, marginTop: 7, textDecoration: "underline" }} onClick={() => setRetorno(lleno)}>
+        <button className="enlace" style={{ marginTop: 8 }} onClick={() => setRetorno(lleno)}>
           Poner {lleno} € (stake × cuota)
         </button>
       )}
@@ -87,13 +87,13 @@ export function Detalle({ bet, onVolver, onGuardar, onBorrar }) {
       {!editar ? (
         <div className="caja">
           <div className="entre" style={{ marginBottom: 6 }}>
-            <span className="tenue" style={{ fontSize: 11 }}>{fechaCorta(bet.date)} · {bet.type}</span>
+            <span className="etiqueta">{fechaCorta(bet.date)} · {bet.type}</span>
             <Insignia c={e.clave}>{e.texto}</Insignia>
           </div>
-          <div style={{ fontSize: 14, lineHeight: 1.5, marginBottom: 10 }}>{bet.desc}</div>
+          <div style={{ fontSize: 12.5, lineHeight: 1.5, marginBottom: 10 }}>{bet.desc}</div>
           <div className="entre">
             <div className="fila"><Insignia>@{bet.odds}</Insignia><Insignia>{bet.stake} € stake</Insignia></div>
-            <button className="tenue" style={{ fontSize: 12, textDecoration: "underline" }} onClick={() => setEditar(true)}>Corregir datos</button>
+            <button className="enlace" onClick={() => setEditar(true)}>Corregir datos</button>
           </div>
         </div>
       ) : (
