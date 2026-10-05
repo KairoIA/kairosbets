@@ -7,6 +7,11 @@ export function PestanaGrafica({ temporada, bets, r, onBet }) {
   const [sel, setSel] = useState(null);
   const hechas = bets.filter((b) => b.result !== "pending");
   const elegida = sel && bets.find((b) => b.id === sel);
+  // Máximo y mínimo del bankroll en la temporada (contando con lo que había al empezar); la primera vez que se alcanzó
+  const serie = [{ id: "inicio", date: temporada.inicio, bankroll: temporada.bankrollInicial }, ...hechas.filter((b) => b.bankroll != null)];
+  const maximo = serie.reduce((m, p) => (p.bankroll > m.bankroll ? p : m), serie[0]);
+  const minimo = serie.reduce((m, p) => (p.bankroll < m.bankroll ? p : m), serie[0]);
+  const cuando = (p) => (p.id === "inicio" ? "al empezar" : fechaCorta(p.date));
   return (
     <div className="scroll">
       <div className="heroe" style={{ paddingTop: 14 }}>
@@ -15,6 +20,10 @@ export function PestanaGrafica({ temporada, bets, r, onBet }) {
           <div><span className="etiqueta">Yield</span><b className={r.yieldPct > 0 ? "pos" : r.yieldPct < 0 ? "neg" : ""}>{r.yieldPct == null ? "—" : pct(r.yieldPct, 1)}</b></div>
           <div><span className="etiqueta">Cuota media</span><b>{r.cuotaMedia == null ? "—" : r.cuotaMedia.toFixed(2)}</b></div>
         </div>
+      </div>
+      <div className="dinero" style={{ paddingBottom: 2 }}>
+        <div><span className="etiqueta">Máximo histórico</span><b className="pos">{maximo.bankroll.toFixed(2)}<small> €</small></b><span className="etiqueta" style={{ display: "block", marginTop: 5 }}>{cuando(maximo)}</span></div>
+        <div><span className="etiqueta">Mínimo histórico</span><b className="neg">{minimo.bankroll.toFixed(2)}<small> €</small></b><span className="etiqueta" style={{ display: "block", marginTop: 5 }}>{cuando(minimo)}</span></div>
       </div>
       <div className="pad">
         <div className="etiqueta" style={{ marginBottom: 12 }}>Bankroll · toca un punto</div>

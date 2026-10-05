@@ -88,17 +88,22 @@ export default function App() {
 
   // Deslizar entre pestañas (no si el dedo empieza en los filtros o en la gráfica)
   const toque = useRef(null);
-  const [arrastre, setArrastre] = useState(0);
+  // Páginas fijas (Javi, 06-oct): no siguen al dedo. Al soltar, si el gesto fue claramente lateral (más de 60 px
+  // y bastante más de lado que de arriba abajo) se pasa de página encajada; si fue para bajar, no se mueve nada.
   const idx = PESTANAS.findIndex((p) => p.id === tab);
-  const alEmpezar = (e) => { toque.current = e.target.closest(".filtros, svg, input, textarea") ? null : e.touches[0].clientX; setArrastre(0); };
-  const alMover = (e) => { if (toque.current !== null) setArrastre(e.touches[0].clientX - toque.current); };
-  const alSoltar = () => {
-    if (Math.abs(arrastre) > 60) {
-      if (arrastre < 0 && idx < PESTANAS.length - 1) setTab(PESTANAS[idx + 1].id);
-      if (arrastre > 0 && idx > 0) setTab(PESTANAS[idx - 1].id);
-    }
+  const alEmpezar = (e) => {
+    const t = e.touches[0];
+    toque.current = e.target.closest(".filtros, input, textarea") ? null : { x: t.clientX, y: t.clientY };
+  };
+  const alSoltar = (e) => {
+    const ini = toque.current;
     toque.current = null;
-    setArrastre(0);
+    if (!ini) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - ini.x, dy = t.clientY - ini.y;
+    if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+    if (dx < 0 && idx < PESTANAS.length - 1) setTab(PESTANAS[idx + 1].id);
+    if (dx > 0 && idx > 0) setTab(PESTANAS[idx - 1].id);
   };
 
   const ajustes = (
@@ -146,8 +151,8 @@ export default function App() {
       )}
 
       {!vista && (
-        <div className="carril" onTouchStart={alEmpezar} onTouchMove={alMover} onTouchEnd={alSoltar}>
-          <div className="tira" style={{ width: `${PESTANAS.length * 100}%`, transform: `translateX(calc(-${idx * (100 / PESTANAS.length)}% + ${arrastre / PESTANAS.length}px))`, transition: arrastre === 0 ? "transform .3s cubic-bezier(.4,0,.2,1)" : "none" }}>
+        <div className="carril" onTouchStart={alEmpezar} onTouchEnd={alSoltar}>
+          <div className="tira" style={{ width: `${PESTANAS.length * 100}%`, transform: `translateX(-${idx * (100 / PESTANAS.length)}%)` }}>
             {PESTANAS.map((p) => (
               <div key={p.id} className="panel" style={{ width: `${100 / PESTANAS.length}%` }}>
                 {p.id === "inicio" && <Inicio temporada={temporada} bets={bets} r={r} archivo={archivo} onBet={(b) => setVista({ tipo: "detalle", id: b.id })} onLiquidar={liquidar} />}
