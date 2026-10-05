@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { cargar, guardarApuestas, guardarTemporadas, siguienteId, exportar, importar, limpiar } from "./datos/almacen.js";
 import { conBankroll, resumen } from "./datos/calculos.js";
-import { urlHoja, ponerUrlHoja, urlValida, marcarPendiente, pendientes, subirPendientes, bajarTodo } from "./datos/hoja.js";
+import { libroExcel } from "./datos/excel.js";
 import { hoy } from "./datos/util.js";
 import { LOGO } from "./piezas/comunes.jsx";
 import Inicio from "./pantallas/Inicio.jsx";
@@ -19,56 +19,11 @@ const PESTANAS = [
   { id: "ia", txt: "IA", ico: "✦" },
 ];
 
-function estadoSync(extra = {}) {
-  if (!urlHoja()) return { estado: "sin-hoja", texto: "Sin copia" };
-  if (extra.subiendo) return { estado: "subiendo", texto: "Copiando" };
-  if (extra.error || pendientes().length) return { estado: "error", texto: "Sin copiar", error: extra.error };
-  return { estado: "ok", texto: "Copiado" };
-}
-
 export default function App() {
   const [datos, setDatos] = useState(() => cargar());
   const [verId, setVerId] = useState(() => datos.temporadas?.activa || null);
   const [tab, setTab] = useState("inicio");
   const [vista, setVista] = useState(null);
-  const [sync, setSync] = useState(() => estadoSync());
-  const datosRef = useRef(datos);
-  datosRef.current = datos;
-  const reloj = useRef(null);
-
-  const subir = useCallback(async () => {
-    if (!urlHoja()) return setSync(estadoSync());
-    if (!pendientes().length) return setSync(estadoSync());
-    setSync(estadoSync({ subiendo: true }));
-    const { temporadas, apuestas } = datosRef.current;
-    const r = temporadas ? await subirPendientes(temporadas, apuestas) : { ok: true };
-    setSync(estadoSync({ error: r.ok ? null : r.error }));
-    return r;
-  }, []);
-
-  const programar = useCallback(() => {
-    clearTimeout(reloj.current);
-    reloj.current = setTimeout(subir, 1200);
-  }, [subir]);
-
-  // Enlace de configuración …/#hoja=<dirección> (se lo manda Claude por Telegram), reintentos al volver la red
-  useEffect(() => {
-    const m = location.hash.match(/hoja=([^&]+)/);
-    if (m) {
-      const u = decodeURIComponent(m[1]);
-      if (urlValida(u)) {
-        ponerUrlHoja(u);
-        (datosRef.current.temporadas?.lista || []).forEach((t) => marcarPendiente(t.id));
-      }
-      history.replaceState(null, "", location.pathname + location.search);
-    }
-    subir();
-    const otraVez = () => subir();
-    window.addEventListener("online", otraVez);
-    const cada = setInterval(() => pendientes().length && subir(), 60000);
-    return () => { window.removeEventListener("online", otraVez); clearInterval(cada); };
-  }, [subir]);
-
   const temporadas = datos.temporadas;
   const activa = temporadas?.lista.find((t) => t.id === temporadas.activa);
   const temporada = temporadas?.lista.find((t) => t.id === verId) || activa;
@@ -81,8 +36,6 @@ export default function App() {
     const limpias = lista.map(limpiar);
     guardarApuestas(id, limpias);
     setDatos((d) => ({ ...d, apuestas: { ...d.apuestas, [id]: limpias } }));
-    marcarPendiente(id);
-    programar();
   }
   const cambiarApuesta = (b) => ponerApuestas(temporada.id, crudas.map((x) => (x.id === b.id ? b : x)));
   const borrarApuesta = (id) => { ponerApuestas(temporada.id, crudas.filter((x) => x.id !== id)); setVista(null); };
@@ -101,8 +54,6 @@ export default function App() {
     guardarApuestas(id, []);
     setDatos((d) => ({ ...d, apuestas: { ...d.apuestas, [id]: [] } }));
     ponerTemporadas({ activa: id, lista });
-    lista.forEach((x) => marcarPendiente(x.id));
-    programar();
     setVerId(id);
     setTab("inicio");
     setVista(null);
@@ -110,41 +61,29 @@ export default function App() {
 
   function renombrar(nombre, stake) {
     ponerTemporadas({ ...temporadas, lista: temporadas.lista.map((x) => (x.id === temporadas.activa ? { ...x, nombre, stake } : x)) });
-    marcarPendiente(temporadas.activa);
-    programar();
   }
 
-  async function recuperar() {
-    try {
-      const { seasons, apuestas } = await bajarTodo();
-      if (!seasons.length) return { error: "La Hoja no tiene temporadas guardadas." };
-      const activaH = [...seasons].reverse().find((s) => !s.archivada) || seasons[seasons.length - 1];
-      seasons.forEach((s) => guardarApuestas(s.id, apuestas[s.id] || []));
-      const t = { activa: activaH.id, lista: seasons };
-      guardarTemporadas(t);
-      setDatos(cargar());
-      setVerId(activaH.id);
-      return { ok: `Recuperadas ${seasons.length} temporadas desde la Hoja.` };
-    } catch (e) {
-      return { error: e.message };
+  // Guarda un archivo en el móvil (Descargas). Con «compartir», abre el menú de Android (Drive, Telegram…)
+  async function entregar(blob, nombre, compartir) {
+    const archivo = new File([blob], nombre, { type: blob.type });
+    if (compartir && navigator.canShare?.({ files: [archivo] })) {
+      try { await navigator.share({ files: [archivo], title: nombre }); return; } catch (e) { if (e.name === "AbortError") return; }
     }
-  }
-
-  function bajarCopia() {
-    const blob = new Blob([exportar(datos.temporadas, datos.apuestas)], { type: "application/json" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = `kairosbets_copia_${hoy()}.json`;
+    a.download = nombre;
+    document.body.appendChild(a);
     a.click();
-    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
   }
+  const bajarExcel = (compartir) => entregar(libroExcel(datos.temporadas, datos.apuestas), `KairosBets_${hoy()}.xlsx`, compartir);
+  const bajarCopia = () => entregar(new Blob([exportar(datos.temporadas, datos.apuestas)], { type: "application/json" }), `kairosbets_copia_${hoy()}.json`);
 
   async function cargarCopia(texto) {
     const d = importar(texto);
     setDatos(d);
     setVerId(d.temporadas.activa);
-    d.temporadas.lista.forEach((t) => marcarPendiente(t.id));
-    programar();
   }
 
   // Deslizar entre pestañas (no si el dedo empieza en los filtros o en la gráfica)
@@ -163,8 +102,8 @@ export default function App() {
   };
 
   const ajustes = (
-    <Ajustes temporada={activa} sync={sync} onVolver={() => setVista(null)} onSubirTodo={async () => { (temporadas?.lista || []).forEach((t) => marcarPendiente(t.id)); return (await subir()) || { ok: true }; }}
-      onRecuperar={recuperar} onExportar={bajarCopia} onImportar={cargarCopia} onRenombrar={renombrar} onTemporadas={() => setVista({ tipo: "temporadas" })} />
+    <Ajustes temporada={activa} onVolver={() => setVista(null)} onExcel={bajarExcel} onExportar={bajarCopia} onImportar={cargarCopia}
+      onRenombrar={renombrar} onTemporadas={() => setVista({ tipo: "temporadas" })} />
   );
 
   // Sin temporadas: primera vez (o móvil nuevo)
@@ -175,7 +114,7 @@ export default function App() {
           <>
             <EmpezarTemporada primera siguienteNombre="Temporada 1" onEmpezar={empezarTemporada} />
             <div className="pad" style={{ position: "absolute", bottom: 10, left: 0, right: 0 }}>
-              <button className="boton suave" onClick={() => setVista({ tipo: "ajustes" })}>¿Ya tenías apuestas? Recupéralas desde la Hoja o una copia</button>
+              <button className="boton suave" onClick={() => setVista({ tipo: "ajustes" })}>¿Ya tenías apuestas? Carga tu copia de seguridad</button>
             </div>
           </>
         )}
@@ -196,7 +135,6 @@ export default function App() {
           </div>
         </div>
         <div className="fila" style={{ gap: 12 }}>
-          <button className={`sync ${sync.estado}`} onClick={() => setVista({ tipo: "ajustes" })} title={sync.error || ""}><i />{sync.texto}</button>
           <button className="engranaje" onClick={() => setVista({ tipo: "ajustes" })} aria-label="Ajustes">⚙</button>
         </div>
       </header>
@@ -237,7 +175,7 @@ export default function App() {
       {vista?.tipo === "ajustes" && ajustes}
       {vista?.tipo === "temporadas" && (
         <ListaTemporadas temporadas={temporadas} apuestas={datos.apuestas} viendo={temporada.id} onVolver={() => setVista(null)}
-          onVer={(id) => { setVerId(id); setTab("inicio"); setVista(null); }} onCerrar={() => setVista({ tipo: "empezar" })} />
+          onVer={(id) => { setVerId(id); setTab("inicio"); setVista(null); }} onCerrar={() => setVista({ tipo: "empezar" })} onExcel={bajarExcel} />
       )}
       {vista?.tipo === "empezar" && (
         <EmpezarTemporada actual={activa} apuestasActual={datos.apuestas[activa.id] || []} siguienteNombre={`Temporada ${temporadas.lista.length + 1}`}

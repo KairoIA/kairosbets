@@ -53,13 +53,6 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
 .marca .nombre { font: 800 20px/1 var(--rotulo); letter-spacing: 1.5px; }
 .chip-temporada { display: inline-flex; align-items: center; gap: 4px; margin-top: 3px; font-size: 9.5px; color: var(--ambar); letter-spacing: 1.4px; text-transform: uppercase; }
 .chip-temporada::after { content: "▾"; font-size: 8px; }
-.sync { display: flex; align-items: center; gap: 5px; font-size: 9.5px; letter-spacing: 1px; text-transform: uppercase; color: var(--tenue); }
-.sync i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; display: block; }
-.sync.ok { color: var(--gana); }
-.sync.subiendo { color: var(--ambar); } .sync.subiendo i { animation: latido 1s infinite; }
-.sync.error { color: var(--pierde); }
-.sync.sin-hoja { color: var(--co-igual); }
-@keyframes latido { 50% { opacity: 0.25; } }
 .engranaje { color: var(--tenue); font-size: 16px; padding: 4px; }
 
 .aviso-archivo { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 18px; background: var(--panel); border-bottom: 1px solid var(--linea); border-left: 3px solid var(--ambar); font-size: 10.5px; letter-spacing: 1px; text-transform: uppercase; color: var(--ambar); flex-shrink: 0; }

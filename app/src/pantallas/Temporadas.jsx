@@ -3,7 +3,7 @@ import { Insignia } from "../piezas/comunes.jsx";
 import { resumen } from "../datos/calculos.js";
 import { euros, signo, pct, fechaCorta } from "../datos/util.js";
 
-export function ListaTemporadas({ temporadas, apuestas, viendo, onVer, onVolver, onCerrar }) {
+export function ListaTemporadas({ temporadas, apuestas, viendo, onVer, onVolver, onCerrar, onExcel }) {
   const lista = [...temporadas.lista].reverse();
   return (
     <div className="scroll pad">
@@ -32,6 +32,7 @@ export function ListaTemporadas({ temporadas, apuestas, viendo, onVer, onVolver,
         );
       })}
       <button className="boton suave" style={{ marginTop: 8 }} onClick={onCerrar}>Cerrar la temporada actual y empezar otra</button>
+      <button className="boton suave" style={{ marginTop: 10 }} onClick={() => onExcel(false)}>Exportar todas a Excel</button>
       <div className="hueco" />
     </div>
   );
