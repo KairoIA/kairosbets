@@ -1,32 +1,30 @@
 # KairosBets
 
-**Value Betting Tracker** — by KairosLab
+**Value Betting Tracker** de KairosLab. PWA para el móvil: apuntar apuestas (a mano, con una captura o escribiéndolas), liquidarlas, seguir el bankroll por temporadas y analizarlas con IA.
 
-App PWA móvil para registrar y analizar apuestas de value betting.
+App: https://kairoia.github.io/kairosbets/
 
-## Características
+## Qué hace (versión 2, oct-2026)
+- **Temporadas.** Cada temporada tiene su bankroll inicial y su stake habitual. Al cerrar una, queda en el archivo y se puede consultar siempre (resumen, gráfica, historial), y la nueva empieza a cero.
+- **Inicio:** bankroll disponible, neto, ROI (beneficio / lo apostado) y crecimiento del bankroll. Las apuestas en juego se liquidan con un toque.
+- **Gráfica** del bankroll e **historial** con búsqueda y filtros.
+- **IA:** análisis de la temporada y crónica semanal (DeepSeek), y lectura de capturas (Gemini).
+- **Copia en una Hoja de Google:** cada temporada en su pestaña. Si la copia falla, la app lo dice y reintenta. Desde la Hoja se puede recuperar todo en un móvil nuevo.
+- **Exportar / cargar copia** en un archivo.
 
-- 📊 Dashboard con bankroll disponible, ROI, racha y estadísticas
-- 📈 Gráfica de evolución del bankroll con puntos interactivos por apuesta
-- 📋 Historial completo con filtros visuales por resultado
-- ➕ Registro rápido de nuevas apuestas
-- 💰 Lógica de cash out inteligente (positivo / break even / negativo)
-- 🔄 Deslizamiento entre pantallas (swipe mobile)
-- 💾 Persistencia de datos en el dispositivo
-- 📱 Instalable como app en Android (PWA)
+Los datos viven en el móvil (`localStorage`). Las claves de IA y la dirección de la Hoja se pegan en Ajustes y no salen del móvil: **nunca van en el código**, que es público.
 
-## Instalar en Android
-
-1. Abre la app en Chrome para Android
-2. Toca el menú (⋮) → **"Añadir a pantalla de inicio"**
-3. Confirma → el icono de KairosLab aparecerá en tu escritorio
-
-## Desarrollo local
-
+## Desarrollo
 ```bash
 npm install
-npm run dev
+npm run build     # compila app/ y deja index.html + assets/ en la raíz (lo que sirve GitHub Pages)
 ```
+- Código: `app/src/` (datos en `datos/`, pantallas en `pantallas/`, estilos en `estilos.css`).
+- `sw.js` (raíz): la página va por red primero (las versiones nuevas llegan solas) y funciona sin conexión.
+- Tras cambiar el código hay que hacer `npm run build` y subir también `index.html` y `assets/`.
+
+## La Hoja de Google
+`hoja/Codigo.gs` va pegado en la Hoja (Extensiones → Apps Script) y publicado como aplicación web (ejecutar como: yo; acceso: cualquier usuario). La dirección que da se pega en la app: Ajustes → Copia en la Hoja.
 
 ---
-*KairosLab Value Betting System · 2026*
+*KairosLab · 2026*

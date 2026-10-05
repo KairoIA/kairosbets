@@ -1,33 +1,10 @@
-const CACHE = "kairosbets-v11";
-const ASSETS = ["/", "/index.html", "/manifest.json", "/icons/icon-192.png", "/icons/icon-512.png"];
-
-self.addEventListener("install", e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).catch(() => {}));
-  self.skipWaiting();
-});
-
-self.addEventListener("activate", e => {
+// Service worker ANTIGUO (hasta oct-2026). Registrado aquí nunca controló la app (su alcance era /public/).
+// Si algún móvil lo tiene, se da de baja solo y borra sus cachés viejas. El nuevo es ../sw.js.
+self.addEventListener("install", () => self.skipWaiting());
+self.addEventListener("activate", (e) => {
   e.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
-    )
-  );
-  self.clients.claim();
-});
-
-self.addEventListener("fetch", e => {
-  if (e.request.method !== "GET") return;
-  e.respondWith(
-    caches.match(e.request).then(cached => {
-      const fetchPromise = fetch(e.request)
-        .then(res => {
-          if (res && res.status === 200) {
-            const clone = res.clone();
-            caches.open(CACHE).then(c => c.put(e.request, clone));
-          }
-          return res;
-        }).catch(() => cached);
-      return cached || fetchPromise;
-    })
+    self.registration.unregister()
+      .then(() => caches.keys())
+      .then((ks) => Promise.all(ks.filter((k) => k.startsWith("kairosbets-v")).map((k) => caches.delete(k))))
   );
 });
