@@ -30,8 +30,11 @@ export function PestanaGrafica({ temporada, bets, r, onBet }) {
           <span className="etiqueta" style={{ display: "block", marginTop: 5 }}>{ahora.euros > 0 ? `−${ahora.pct.toFixed(1)}% desde ${cuando(ahora.pico)}` : "en máximos"}</span>
         </div>
         <div style={{ gridColumn: "1 / -1" }}>
-          <span className="etiqueta">Máx. drawdown histórico</span>
-          {/* Javi (06-oct): solo lo que cayó, en € y en %, sin «de tanto a tanto» */}
+          {/* Javi (06-oct): lo que cayó en € y en %, y en pequeño al lado las fechas del pico y del fondo */}
+          <div className="entre">
+            <span className="etiqueta">Máx. drawdown histórico</span>
+            {dd.euros > 0 && <span className="etiqueta">{cuando(dd.pico)} → {cuando(dd.fondo)}</span>}
+          </div>
           <b className={dd.euros > 0 ? "neg" : ""}>
             {dd.euros > 0 ? "−" + dd.euros.toFixed(2) : "0.00"}<small> €</small>
             <span style={{ marginLeft: 22 }}>{dd.euros > 0 ? "−" + dd.pct.toFixed(1) : "0.0"}<small> %</small></span>
