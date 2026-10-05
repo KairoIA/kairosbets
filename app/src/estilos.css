@@ -80,6 +80,8 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
 .tablero > div { background: var(--panel); border: 1px solid var(--linea); border-radius: 4px; padding: 8px 0 7px; text-align: center; }
 .tablero b { display: block; font: 700 26px/1 var(--rotulo); }
 .tablero span { font-size: 8.5px; color: var(--tenue); letter-spacing: 1.2px; text-transform: uppercase; }
+.tablero.cinco { grid-template-columns: repeat(5, 1fr); gap: 5px; }
+.tablero.cinco span { letter-spacing: 0.6px; }
 .mini-grafica { padding: 2px 18px 12px; }
 .seccion { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 14px 18px 8px; border-top: 1px solid var(--linea); }
 

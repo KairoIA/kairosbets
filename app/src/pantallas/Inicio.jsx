@@ -24,11 +24,11 @@ export default function Inicio({ temporada, bets, r, onBet, onLiquidar, archivo 
         <div className="nota-heroe">
           Empezó con {euros(temporada.bankrollInicial)}
           {r.crecimiento != null && r.liquidadas > 0 && <> · bankroll {pct(r.crecimiento)}</>} · stake {temporada.stake} €
-          {r.winRate != null && r.cashouts > 0 && <><br />Win rate con los cash out en proporción (parte de la ganancia posible o del stake perdido)</>}
         </div>
       </div>
 
-      <div className="tablero">
+      <div className="tablero cinco">
+        <div><b>{r.total}</b><span>Total</span></div>
         <div><b className="pos">{r.ganadas}</b><span>Ganadas</span></div>
         <div><b className="neg">{r.perdidas}</b><span>Perdidas</span></div>
         <div><b>{r.cashouts}</b><span>Cash out</span></div>
