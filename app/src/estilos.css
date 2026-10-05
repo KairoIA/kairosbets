@@ -72,6 +72,9 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
 .tres > div:first-child { padding-left: 0; }
 .tres > div:last-child { border-right: 0; }
 .tres b { display: block; font: 700 22px/1 var(--rotulo); margin-top: 4px; }
+.tres.cuatro { grid-template-columns: repeat(4, 1fr); }
+.tres.cuatro > div:not(:first-child) { padding-left: 10px; }
+.tres.cuatro b { font-size: 20px; }
 .nota-heroe { font-size: 10px; color: var(--tenue); padding: 8px 0 0; letter-spacing: 0.3px; }
 .tablero { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; padding: 12px 18px; }
 .tablero > div { background: var(--panel); border: 1px solid var(--linea); border-radius: 4px; padding: 8px 0 7px; text-align: center; }

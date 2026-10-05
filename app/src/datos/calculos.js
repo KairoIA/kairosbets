@@ -65,6 +65,7 @@ export function resumen(bets, inicial) {
     cashouts: hechas.filter((b) => b.result === "cashout").length,
     aciertos: hechas.filter(positiva).length,
     liquidadas: hechas.length,
+    winRate: winRate(hechas),
     enJuego: enJuego.length,
     comprometido,
     neto,
@@ -76,6 +77,27 @@ export function resumen(bets, inicial) {
     cuotaMedia: cuotas.length ? cuotas.reduce((a, b) => a + b, 0) / cuotas.length : null,
     racha: racha(bets),
   };
+}
+
+// Win rate ponderado (Javi, 05-oct-2026): ganada = 1 acierto y perdida = 1 derrota. Un cash out NO cuenta como
+// una entera: por encima del stake es acierto en la parte de la ganancia posible que se llevó (beneficio ÷ (stake ×
+// (cuota − 1))); por debajo, derrota en la parte del stake que perdió (pérdida ÷ stake); justo al stake, nada.
+// Win rate = aciertos ÷ (aciertos + derrotas).
+export function peso(b) {
+  if (b.result === "win") return { acierto: 1, derrota: 0 };
+  if (b.result === "loss") return { acierto: 0, derrota: 1 };
+  if (b.result !== "cashout" || b.pl == null || !b.stake) return { acierto: 0, derrota: 0 };
+  if (b.pl > 0) {
+    const posible = b.stake * (b.odds - 1);
+    return { acierto: posible > 0 ? Math.min(1, b.pl / posible) : 1, derrota: 0 };
+  }
+  return { acierto: 0, derrota: Math.min(1, -b.pl / b.stake) };
+}
+
+export function winRate(hechas) {
+  let a = 0, d = 0;
+  for (const b of hechas) { const p = peso(b); a += p.acierto; d += p.derrota; }
+  return a + d > 0 ? (a / (a + d)) * 100 : null;
 }
 
 // Beneficio de una apuesta a partir de lo que devolvió la casa

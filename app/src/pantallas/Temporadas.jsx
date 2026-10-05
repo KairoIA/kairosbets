@@ -26,6 +26,7 @@ export function ListaTemporadas({ temporadas, apuestas, viendo, onVer, onVolver,
               <Insignia>{euros(t.bankrollInicial)} → {euros(r.bankroll)}</Insignia>
               <Insignia c={r.neto >= 0 ? "win" : "loss"}>{signo(r.neto)}</Insignia>
               <Insignia c={r.roi >= 0 ? "pending" : "loss"}>ROI {pct(r.roi, 1)}</Insignia>
+              {r.winRate != null && <Insignia>Win {r.winRate.toFixed(0)}%</Insignia>}
               {r.enJuego > 0 && <Insignia c="pending">{r.enJuego} en juego</Insignia>}
             </div>
           </button>

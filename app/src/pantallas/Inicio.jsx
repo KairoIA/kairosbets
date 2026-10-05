@@ -15,14 +15,16 @@ export default function Inicio({ temporada, bets, r, onBet, onLiquidar, archivo 
       <div className="heroe">
         <div className="etiqueta">{etiqueta}</div>
         <div className={`cifra ${cifra.length >= 7 ? "larga" : ""}`}>{cifra}<span>€</span></div>
-        <div className="tres">
+        <div className="tres cuatro">
           <div><span className="etiqueta">Neto</span><b className={r.neto > 0 ? "pos" : r.neto < 0 ? "neg" : ""}>{masmenos(r.neto)}</b></div>
           <div><span className="etiqueta">ROI</span><b className={r.roi > 0 ? "pos" : r.roi < 0 ? "neg" : ""}>{r.roi == null ? "—" : pct(r.roi, 1)}</b></div>
+          <div><span className="etiqueta">Win rate</span><b>{r.winRate == null ? "—" : r.winRate.toFixed(0) + "%"}</b></div>
           <div><span className="etiqueta">En juego</span><b>{r.comprometido.toFixed(2)}</b></div>
         </div>
         <div className="nota-heroe">
           Empezó con {euros(temporada.bankrollInicial)}
           {r.crecimiento != null && r.liquidadas > 0 && <> · bankroll {pct(r.crecimiento)}</>} · stake {temporada.stake} €
+          {r.winRate != null && r.cashouts > 0 && <><br />Win rate con los cash out en proporción (parte de la ganancia posible o del stake perdido)</>}
         </div>
       </div>
 
