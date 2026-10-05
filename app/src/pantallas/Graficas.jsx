@@ -1,16 +1,17 @@
 import { useState } from "react";
 import { Grafica, Insignia, Linea, masmenos } from "../piezas/comunes.jsx";
-import { estado } from "../datos/calculos.js";
+import { estado, maxDrawdown, drawdownActual } from "../datos/calculos.js";
 import { pct, fechaCorta } from "../datos/util.js";
 
 export function PestanaGrafica({ temporada, bets, r, onBet }) {
   const [sel, setSel] = useState(null);
   const hechas = bets.filter((b) => b.result !== "pending");
   const elegida = sel && bets.find((b) => b.id === sel);
-  // Máximo y mínimo del bankroll en la temporada (contando con lo que había al empezar); la primera vez que se alcanzó
+  // Máximo del bankroll en la temporada (contando con lo que había al empezar) y el máximo drawdown
   const serie = [{ id: "inicio", date: temporada.inicio, bankroll: temporada.bankrollInicial }, ...hechas.filter((b) => b.bankroll != null)];
   const maximo = serie.reduce((m, p) => (p.bankroll > m.bankroll ? p : m), serie[0]);
-  const minimo = serie.reduce((m, p) => (p.bankroll < m.bankroll ? p : m), serie[0]);
+  const dd = maxDrawdown(serie);
+  const ahora = drawdownActual(serie);
   const cuando = (p) => (p.id === "inicio" ? "al empezar" : fechaCorta(p.date));
   return (
     <div className="scroll">
@@ -23,7 +24,16 @@ export function PestanaGrafica({ temporada, bets, r, onBet }) {
       </div>
       <div className="dinero" style={{ paddingBottom: 2 }}>
         <div><span className="etiqueta">Máximo histórico</span><b className="pos">{maximo.bankroll.toFixed(2)}<small> €</small></b><span className="etiqueta" style={{ display: "block", marginTop: 5 }}>{cuando(maximo)}</span></div>
-        <div><span className="etiqueta">Mínimo histórico</span><b className="neg">{minimo.bankroll.toFixed(2)}<small> €</small></b><span className="etiqueta" style={{ display: "block", marginTop: 5 }}>{cuando(minimo)}</span></div>
+        <div>
+          <span className="etiqueta">Drawdown actual</span>
+          <b className={ahora.euros > 0 ? "neg" : "pos"}>{ahora.euros > 0 ? "−" + ahora.euros.toFixed(2) : "0.00"}<small> €</small></b>
+          <span className="etiqueta" style={{ display: "block", marginTop: 5 }}>{ahora.euros > 0 ? `−${ahora.pct.toFixed(1)}% desde ${cuando(ahora.pico)}` : "en máximos"}</span>
+        </div>
+        <div style={{ gridColumn: "1 / -1" }}>
+          <span className="etiqueta">Máx. drawdown histórico</span>
+          <b className={dd.euros > 0 ? "neg" : ""}>{dd.euros > 0 ? "−" + dd.euros.toFixed(2) : "0.00"}<small> €</small>{dd.euros > 0 && <small> · −{dd.pct.toFixed(1)}%</small>}</b>
+          <span className="etiqueta" style={{ display: "block", marginTop: 5 }}>{dd.euros > 0 ? `del ${cuando(dd.pico)} (${dd.pico.bankroll.toFixed(2)} €) al ${cuando(dd.fondo)} (${dd.fondo.bankroll.toFixed(2)} €)` : "sin caídas"}</span>
+        </div>
       </div>
       <div className="pad">
         <div className="etiqueta" style={{ marginBottom: 12 }}>Bankroll · toca un punto</div>

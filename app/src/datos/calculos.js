@@ -101,6 +101,25 @@ export function winRate(hechas) {
   return a + d > 0 ? (a / (a + d)) * 100 : null;
 }
 
+// Máximo drawdown (Javi, 06-oct): la mayor caída del bankroll desde un pico hasta el punto más bajo posterior.
+// serie: [{ bankroll, date, id }] en orden. Devuelve { euros, pct, pico, fondo } (euros = 0 si nunca bajó).
+export function maxDrawdown(serie) {
+  let pico = serie[0], mejor = { euros: 0, pct: 0, pico: null, fondo: null };
+  for (const p of serie) {
+    if (p.bankroll > pico.bankroll) pico = p;
+    const caida = pico.bankroll - p.bankroll;
+    if (caida > mejor.euros + 1e-9) mejor = { euros: redondear(caida), pct: pico.bankroll > 0 ? (caida / pico.bankroll) * 100 : null, pico, fondo: p };
+  }
+  return mejor;
+}
+
+// Drawdown actual: cuánto está ahora el bankroll por debajo de su máximo. { euros, pct, pico } (euros = 0 en máximos)
+export function drawdownActual(serie) {
+  const pico = serie.reduce((m, p) => (p.bankroll > m.bankroll ? p : m), serie[0]);
+  const caida = pico.bankroll - serie[serie.length - 1].bankroll;
+  return { euros: redondear(Math.max(0, caida)), pct: pico.bankroll > 0 ? (Math.max(0, caida) / pico.bankroll) * 100 : null, pico };
+}
+
 // Beneficio de una apuesta a partir de lo que devolvió la casa
 export function beneficio(resultado, stake, retorno) {
   if (resultado === "loss") return -stake;
