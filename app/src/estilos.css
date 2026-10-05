@@ -81,6 +81,11 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
 .tablero b { display: block; font: 700 26px/1 var(--rotulo); }
 .tablero span { font-size: 8.5px; color: var(--tenue); letter-spacing: 1.2px; text-transform: uppercase; }
 .tablero.cinco { grid-template-columns: repeat(5, 1fr); gap: 5px; }
+.dinero { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 12px 18px 0; }
+.dinero > div { background: var(--panel); border: 1px solid var(--linea); border-radius: 4px; padding: 9px 12px 8px; }
+.dinero b { display: block; font: 700 28px/1 var(--rotulo); margin-top: 5px; }
+.dinero small { font-size: 15px; color: var(--tenue); }
+.dinero + .tablero { padding-top: 6px; }
 .tablero.cinco span { letter-spacing: 0.6px; }
 .mini-grafica { padding: 2px 18px 12px; }
 .seccion { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 14px 18px 8px; border-top: 1px solid var(--linea); }
