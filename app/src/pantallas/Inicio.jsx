@@ -17,16 +17,16 @@ export default function Inicio({ temporada, bets, r, onBet, onLiquidar, archivo 
         <div className={`cifra ${cifra.length >= 7 ? "larga" : ""}`}>{cifra}<span>€</span></div>
         <div className="tres">
           <div><span className="etiqueta">Neto</span><b className={r.neto > 0 ? "pos" : r.neto < 0 ? "neg" : ""}>{masmenos(r.neto)}</b></div>
-          <div><span className="etiqueta">ROI</span><b className={r.roi > 0 ? "pos" : r.roi < 0 ? "neg" : ""}>{r.roi == null ? "—" : pct(r.roi, 1)}</b></div>
+          <div><span className="etiqueta">Yield</span><b className={r.yieldPct > 0 ? "pos" : r.yieldPct < 0 ? "neg" : ""}>{r.yieldPct == null ? "—" : pct(r.yieldPct, 1)}</b></div>
           <div><span className="etiqueta">Win rate</span><b>{r.winRate == null ? "—" : r.winRate.toFixed(0) + "%"}</b></div>
         </div>
         <div className="nota-heroe">
           Empezó con {euros(temporada.bankrollInicial)}
-          {r.crecimiento != null && r.liquidadas > 0 && <> · bankroll {pct(r.crecimiento)}</>} · stake {temporada.stake} €
+          {r.roiInicial != null && r.liquidadas > 0 && <> · ROI {pct(r.roiInicial)}</>} · stake {temporada.stake} €
         </div>
       </div>
 
-      {/* Apostado = lo jugado en las liquidadas (así ROI = neto ÷ apostado); lo que sigue en juego va aparte */}
+      {/* Apostado = lo jugado en las liquidadas (así yield = neto ÷ apostado); lo que sigue en juego va aparte */}
       <div className="dinero">
         <div><span className="etiqueta">Total apostado</span><b>{r.apostado.toFixed(2)}<small> €</small></b></div>
         <div><span className="etiqueta">En juego</span><b className={r.enJuego ? "ambar" : ""}>{r.comprometido.toFixed(2)}<small> €</small></b></div>

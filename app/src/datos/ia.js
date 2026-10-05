@@ -112,7 +112,7 @@ export async function analizar(bets) {
 Historial: ${JSON.stringify(resueltas(bets))}
 Devuelve SOLO JSON válido:
 {"resumen":"2-3 frases","stats":{"totalBets":N,"wins":N,"losses":N,"cashouts":N,"winRate":"X%","roi":"X%","totalPL":N,"avgOdds":N},"mejoresMercados":[{"mercado":"nombre","record":"W-L","pl":N,"nota":"breve"}],"peoresMercados":[{"mercado":"nombre","record":"W-L","pl":N,"nota":"breve"}],"diasSemana":[{"dia":"nombre","bets":N,"wins":N,"pl":N}],"ligas":[{"liga":"nombre","bets":N,"wins":N,"pl":N}],"rachas":"descripción","insights":["1","2","3"],"recomendaciones":["1","2","3"]}
-Sé específico. Identifica ligas por nombres de equipos. El ROI es beneficio total / total apostado.`;
+Sé específico. Identifica ligas por nombres de equipos. El campo "roi" es el yield: beneficio total / total apostado.`;
   return json(await deepseek([{ role: "user", content: prompt }], 0.4));
 }
 

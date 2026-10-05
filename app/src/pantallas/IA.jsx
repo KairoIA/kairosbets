@@ -23,7 +23,7 @@ function Analisis({ d }) {
       <div className="bloque consejo" style={{ marginBottom: 12 }}>{d.resumen}</div>
       <div className="rejilla3">
         <div className="stat"><b className="pos">{s.winRate}</b><span>Acierto</span></div>
-        <div className="stat"><b className="ambar">{s.roi}</b><span>ROI</span></div>
+        <div className="stat"><b className="ambar">{s.roi}</b><span>Yield</span></div>
         <div className="stat"><b className={num(s.totalPL) >= 0 ? "pos" : "neg"}>{eur(s.totalPL)}</b><span>P&L</span></div>
       </div>
       <div className="rejilla4">

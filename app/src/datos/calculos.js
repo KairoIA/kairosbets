@@ -48,8 +48,9 @@ export function racha(bets) {
   return { n, tipo };
 }
 
-// Todo lo que enseña el inicio. «ROI» es el de verdad (beneficio / lo apostado);
-// lo que antes se llamaba ROI era lo que ha crecido el bankroll, y ahora se llama así.
+// Todo lo que enseña el inicio (nombres elegidos por Javi el 05-oct-2026):
+//   yield = beneficio ÷ total apostado (lo bien que apuesta; el «ROI» de las casas y los tipsters)
+//   ROI   = beneficio ÷ bankroll inicial (lo que ha rendido el dinero que puso)
 export function resumen(bets, inicial) {
   const hechas = bets.filter(liquidada);
   const enJuego = bets.filter((b) => b.result === "pending");
@@ -70,10 +71,10 @@ export function resumen(bets, inicial) {
     comprometido,
     neto,
     apostado: redondear(apostado),
-    roi: apostado > 0 ? (neto / apostado) * 100 : null,
+    yieldPct: apostado > 0 ? (neto / apostado) * 100 : null,
     bankroll,
     disponible: redondear(bankroll - comprometido),
-    crecimiento: inicial > 0 ? ((bankroll - inicial) / inicial) * 100 : null,
+    roiInicial: inicial > 0 ? ((bankroll - inicial) / inicial) * 100 : null,
     cuotaMedia: cuotas.length ? cuotas.reduce((a, b) => a + b, 0) / cuotas.length : null,
     racha: racha(bets),
   };

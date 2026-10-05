@@ -50,17 +50,17 @@ export function libroExcel(temporadas, apuestas) {
   const n = (x) => ({ v: x == null ? null : Math.round(x * 100) / 100, s: 3 });
   const f = (x) => ({ v: serial(x), s: 2 });
 
-  const filasResumen = [["Temporada", "Inicio", "Fin", "Bankroll inicial", "Apuestas", "Ganadas", "Perdidas", "Cash out", "En juego", "Apostado", "Neto", "ROI", "Win rate (cash out ponderado)", "Bankroll final", "Estado"]];
+  const filasResumen = [["Temporada", "Inicio", "Fin", "Bankroll inicial", "Apuestas", "Ganadas", "Perdidas", "Cash out", "En juego", "Apostado", "Neto", "Yield (neto ÷ apostado)", "ROI (neto ÷ bankroll inicial)", "Win rate (cash out ponderado)", "Bankroll final", "Estado"]];
   const hojas = lista.map((t, i) => {
     const bets = conBankroll(apuestas[t.id] || [], t.bankrollInicial);
     const r = resumen(apuestas[t.id] || [], t.bankrollInicial);
     filasResumen.push([t.nombre, f(t.inicio), f(t.fin), n(t.bankrollInicial), r.total, r.ganadas, r.perdidas, r.cashouts, r.enJuego,
-      n(r.apostado), n(r.neto), { v: r.roi == null ? null : r.roi / 100, s: 4 }, { v: r.winRate == null ? null : r.winRate / 100, s: 4 }, n(r.bankroll), t.id === temporadas.activa ? "En curso" : "Archivada"]);
+      n(r.apostado), n(r.neto), { v: r.yieldPct == null ? null : r.yieldPct / 100, s: 4 }, { v: r.roiInicial == null ? null : r.roiInicial / 100, s: 4 }, { v: r.winRate == null ? null : r.winRate / 100, s: 4 }, n(r.bankroll), t.id === temporadas.activa ? "En curso" : "Archivada"]);
     const filas = [["Fecha", "Tipo", "Apuesta", "Cuota", "Stake", "Resultado", "P&L", "Bankroll", "Notas"]];
     for (const b of bets) filas.push([f(b.date), b.type, b.desc, n(b.odds), n(b.stake), RESULTADO[b.result] || b.result, n(b.pl), n(b.bankroll), b.notes || ""]);
     return { nombre: pestanas[i], xml: hoja(filas, [11, 11, 60, 8, 8, 11, 10, 11, 40]) };
   });
-  const todas = [{ nombre: "Resumen", xml: hoja(filasResumen, [24, 11, 11, 15, 10, 9, 9, 9, 9, 11, 11, 9, 14, 14, 11]) }, ...hojas];
+  const todas = [{ nombre: "Resumen", xml: hoja(filasResumen, [24, 11, 11, 15, 10, 9, 9, 9, 9, 11, 11, 13, 14, 14, 14, 11]) }, ...hojas];
 
   const archivos = {
     "[Content_Types].xml": `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>

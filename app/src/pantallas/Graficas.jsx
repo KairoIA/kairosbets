@@ -12,7 +12,7 @@ export function PestanaGrafica({ temporada, bets, r, onBet }) {
       <div className="heroe" style={{ paddingTop: 14 }}>
         <div className="tres" style={{ marginTop: 0, borderTop: 0 }}>
           <div><span className="etiqueta">Bankroll</span><b className="ambar">{r.bankroll.toFixed(2)}</b></div>
-          <div><span className="etiqueta">ROI</span><b className={r.roi > 0 ? "pos" : r.roi < 0 ? "neg" : ""}>{r.roi == null ? "—" : pct(r.roi, 1)}</b></div>
+          <div><span className="etiqueta">Yield</span><b className={r.yieldPct > 0 ? "pos" : r.yieldPct < 0 ? "neg" : ""}>{r.yieldPct == null ? "—" : pct(r.yieldPct, 1)}</b></div>
           <div><span className="etiqueta">Cuota media</span><b>{r.cuotaMedia == null ? "—" : r.cuotaMedia.toFixed(2)}</b></div>
         </div>
       </div>
