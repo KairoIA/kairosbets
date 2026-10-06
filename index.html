@@ -2,31 +2,19 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover" />
-  <meta name="theme-color" content="#0b0b0c" />
-  <meta name="mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="KairosBets" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
   <meta name="robots" content="noindex" />
-  <link rel="manifest" href="manifest.json" />
-  <link rel="icon" href="public/icons/favicon.ico" sizes="48x48" />
-  <link rel="icon" href="public/icons/icon-192.png" type="image/png" />
-  <link rel="apple-touch-icon" href="public/icons/apple-touch-icon.png" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@500;700;800&family=Chivo+Mono:wght@400;500&family=Chivo:wght@400;500&family=Playfair+Display:ital,wght@0,900;1,700&family=Lora:ital@0;1&display=swap" />
   <title>KairosBets</title>
-  <style>
-    html, body { margin: 0; background: #0b0b0c; }
-    #splash { position: fixed; inset: 0; background: #0b0b0c; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; z-index: 9999; transition: opacity .4s; }
-    #splash img { border-radius: 50%; box-shadow: 0 0 40px rgba(255, 178, 26, .25); }
-  </style>
-  <script type="module" crossorigin src="./assets/index-CBWQAPPl.js"></script>
-  <link rel="stylesheet" crossorigin href="./assets/index-Dex9XaoQ.css">
+  <!-- Desde el 06-oct-2026 KairosBets vive en https://kairoia.github.io/kb/ (mismo sitio: los datos del móvil se conservan).
+       El código sigue en este repositorio (app/); `npm run build` publica en ../kairoia.github.io/kb/. -->
+  <meta http-equiv="refresh" content="0; url=/kb/" />
+  <script>
+    if ("serviceWorker" in navigator) navigator.serviceWorker.getRegistrations().then((rs) => rs.forEach((r) => !r.scope.includes("/kb/") && r.unregister()));
+    location.replace("/kb/" + location.search + location.hash);
+  </script>
+  <style>body{margin:0;background:#0b0b0c;color:#8b877e;font:13px ui-monospace,monospace;display:grid;place-items:center;height:100vh}a{color:#ffb21a}</style>
 </head>
 <body>
-  <div id="splash"><img src="public/icons/icon-192.png" width="110" height="110" alt="KairosBets" /></div>
-  <div id="root"></div>
+  <p>KairosBets se ha mudado a <a href="/kb/">kairoia.github.io/kb</a></p>
 </body>
 </html>

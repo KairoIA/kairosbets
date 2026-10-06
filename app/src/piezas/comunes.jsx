@@ -1,7 +1,7 @@
 import { estado } from "../datos/calculos.js";
 import { fechaCorta, euros } from "../datos/util.js";
 
-export const LOGO = "public/icons/icon-192.png";
+export const LOGO = "icons/icon-192.png";
 
 export const Sep = () => <div className="sep" />;
 
