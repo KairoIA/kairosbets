@@ -90,7 +90,7 @@ export function Detalle({ bet, onVolver, onGuardar, onBorrar }) {
             <span className="etiqueta">{fechaCorta(bet.date)} · {bet.type}</span>
             <Insignia c={e.clave}>{e.texto}</Insignia>
           </div>
-          <div style={{ fontSize: 12.5, lineHeight: 1.5, marginBottom: 10 }}>{bet.desc}</div>
+          <div className="copiable" style={{ fontSize: 12.5, lineHeight: 1.5, marginBottom: 10 }}>{bet.desc}</div>
           <div className="entre">
             <div className="fila"><Insignia>@{bet.odds}</Insignia><Insignia>{bet.stake} € stake</Insignia></div>
             <button className="enlace" onClick={() => setEditar(true)}>Corregir datos</button>

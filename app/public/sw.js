@@ -1,15 +1,15 @@
-// KairosBets · service worker de https://kairoia.github.io/kb/ (dirección oficial desde el 06-oct-2026).
+// KairosBets · service worker de https://kairosbets.pages.dev (dirección oficial desde el 06-oct-2026).
 // - La página: primero la red y, sin red, la copia guardada → las versiones nuevas llegan solas.
 // - manifest.json también por red primero (así Chrome siempre ve el bueno al instalar).
 // - assets/ (nombres con huella) e iconos: primero la copia guardada.
 // - Lo de fuera (Google, DeepSeek) no se toca.
-// La caché lleva el nombre de esta carpeta: en el mismo sitio vivió /kairosbets/ y no deben pisarse.
-const VERSION = 6;
+// La caché lleva el nombre de su carpeta («kb-/-N»), por si algún día conviven dos copias en un mismo sitio.
+const VERSION = 7;
 const PREFIJO = "kb-" + new URL(self.registration.scope).pathname + "-";
 const CACHE = PREFIJO + VERSION;
 
 self.addEventListener("install", (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(["./", "./manifest.json", "./icons/icon-192.png"])).catch(() => {}));
+  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(["./", "./manifest.json", "./icons/icon-192.png", "./icons/logo-480.webp"])).catch(() => {}));
   self.skipWaiting();
 });
 

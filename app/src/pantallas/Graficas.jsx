@@ -16,10 +16,11 @@ export function PestanaGrafica({ temporada, bets, r, onBet }) {
   return (
     <div className="scroll">
       <div className="heroe" style={{ paddingTop: 14 }}>
-        <div className="tres" style={{ marginTop: 0, borderTop: 0 }}>
+        <div className="tres cuatro" style={{ marginTop: 0, borderTop: 0 }}>
           <div><span className="etiqueta">Bankroll</span><b className="ambar">{r.bankroll.toFixed(2)}</b></div>
+          <div><span className="etiqueta">Neto</span><b className={r.neto > 0 ? "pos" : r.neto < 0 ? "neg" : ""}>{masmenos(r.neto)}</b></div>
           <div><span className="etiqueta">Yield</span><b className={r.yieldPct > 0 ? "pos" : r.yieldPct < 0 ? "neg" : ""}>{r.yieldPct == null ? "—" : pct(r.yieldPct, 1)}</b></div>
-          <div><span className="etiqueta">Cuota media</span><b>{r.cuotaMedia == null ? "—" : r.cuotaMedia.toFixed(2)}</b></div>
+          <div><span className="etiqueta">Cuota med.</span><b>{r.cuotaMedia == null ? "—" : r.cuotaMedia.toFixed(2)}</b></div>
         </div>
       </div>
       <div className="dinero" style={{ paddingBottom: 2 }}>
@@ -82,15 +83,53 @@ const FILTROS = [
   ["combinadas", "Combinadas", (b) => b.type === "Combinada"],
 ];
 
+// Columnas que ordenan al tocarlas (Javi, 06-oct): la primera vez de mayor a menor, la segunda al revés.
+// Las que siguen en juego no tienen P&L y van siempre al final al ordenar por P&L.
+const COLUMNAS = [
+  ["fecha", "Fecha", (b) => b.date],
+  ["cuota", "Cuota", (b) => Number(b.odds) || 0],
+  ["pl", "P&L", (b) => b.pl],
+];
+
+function Extremo({ titulo, bet, onBet }) {
+  return (
+    <button onClick={() => bet && onBet(bet)} disabled={!bet}>
+      <span className="etiqueta">{titulo}</span>
+      <b className={bet ? (bet.pl >= 0 ? "pos" : "neg") : "tenue"}>{bet ? masmenos(bet.pl) : "—"}{bet && <small> €</small>}</b>
+      <span className="pie">{bet ? `${fechaCorta(bet.date)} · ${bet.desc}` : "sin datos"}</span>
+    </button>
+  );
+}
+
 export function PestanaHistorial({ bets, onBet }) {
   const [filtro, setFiltro] = useState("todas");
   const [busca, setBusca] = useState("");
+  const [orden, setOrden] = useState({ col: "fecha", desc: true });
   const f = FILTROS.find((x) => x[0] === filtro)[2];
   const q = busca.trim().toLowerCase();
+  const valor = COLUMNAS.find((c) => c[0] === orden.col)[2];
   const lista = [...bets].reverse().filter(f).filter((b) => !q || (b.desc + " " + b.notes).toLowerCase().includes(q));
+  if (orden.col !== "fecha" || !orden.desc) {
+    lista.sort((a, b) => {
+      const x = valor(a), y = valor(b);
+      if (x == null && y == null) return 0;
+      if (x == null) return 1;
+      if (y == null) return -1;
+      return (x < y ? -1 : x > y ? 1 : 0) * (orden.desc ? -1 : 1);
+    });
+  }
+  const tocar = (col) => setOrden((o) => ({ col, desc: o.col === col ? !o.desc : true }));
+  const mejor = (lista2, cmp) => lista2.reduce((m, b) => (m == null || cmp(b.pl, m.pl) ? b : m), null);
+  const ganadas = bets.filter((b) => b.result === "win" && b.pl != null);
+  const cashouts = bets.filter((b) => b.result === "cashout" && b.pl != null);
   const neto = lista.filter((b) => b.pl != null).reduce((a, b) => a + b.pl, 0);
   return (
     <div className="scroll">
+      <div className="dinero tres-col" style={{ paddingTop: 14 }}>
+        <Extremo titulo="Mayor ganancia" bet={mejor(ganadas, (a, b) => a > b)} onBet={onBet} />
+        <Extremo titulo="Mayor cash out" bet={mejor(cashouts, (a, b) => a > b)} onBet={onBet} />
+        <Extremo titulo="Menor cash out" bet={mejor(cashouts, (a, b) => a < b)} onBet={onBet} />
+      </div>
       <div className="pad" style={{ paddingBottom: 10 }}>
         <input className="entrada" value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar equipo, mercado, nota…" aria-label="Buscar" />
       </div>
@@ -102,6 +141,13 @@ export function PestanaHistorial({ bets, onBet }) {
       <div className="seccion" style={{ borderBottom: "1px solid var(--linea)" }}>
         <span className="etiqueta">{lista.length} apuestas</span>
         <span className={`rotulo ${neto > 0 ? "pos" : neto < 0 ? "neg" : ""}`} style={{ fontSize: 20, fontWeight: 700 }}>{masmenos(neto)}</span>
+      </div>
+      <div className="columnas">
+        {COLUMNAS.map(([id, txt]) => (
+          <button key={id} className={orden.col === id ? "activa" : ""} onClick={() => tocar(id)}>
+            {txt} {orden.col === id ? (orden.desc ? "▼" : "▲") : ""}
+          </button>
+        ))}
       </div>
       {lista.map((b) => <Linea key={b.id} bet={b} conBank onClick={() => onBet(b)} />)}
       {!lista.length && <div className="pad tenue" style={{ textAlign: "center", padding: 30, fontSize: 11 }}>Nada con ese filtro</div>}

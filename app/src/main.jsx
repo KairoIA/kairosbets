@@ -4,10 +4,13 @@ import "./estilos.css";
 
 createRoot(document.getElementById("root")).render(<App />);
 
+// La intro se queda ~1,7 s desde que se abrió la app (no desde que cargó), y se desvanece
 const splash = document.getElementById("splash");
 if (splash) {
-  splash.style.opacity = "0";
-  setTimeout(() => splash.remove(), 400);
+  setTimeout(() => {
+    splash.classList.add("fuera");
+    setTimeout(() => splash.remove(), 500);
+  }, Math.max(0, 1700 - performance.now()));
 }
 
 if ("serviceWorker" in navigator) {

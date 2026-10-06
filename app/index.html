@@ -19,12 +19,19 @@
   <title>KairosBets</title>
   <style>
     html, body { margin: 0; background: #0b0b0c; }
-    #splash { position: fixed; inset: 0; background: #0b0b0c; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; z-index: 9999; transition: opacity .4s; }
-    #splash img { border-radius: 50%; box-shadow: 0 0 40px rgba(255, 178, 26, .25); }
+    /* Intro (Javi, 06-oct): el logo entra con un pequeño zoom y su brillo, sale el nombre y a los ~1,7 s entra la app */
+    #splash { position: fixed; inset: 0; background: #0b0b0c; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px; z-index: 9999; transition: opacity .45s ease; }
+    #splash img { width: min(58vw, 240px); height: auto; animation: kb-entra .9s cubic-bezier(.2, .8, .2, 1) both, kb-brillo 1.8s ease-in-out .5s both; }
+    #splash .nombre { font: 800 28px/1 "Big Shoulders Display", "Arial Narrow", sans-serif; letter-spacing: 6px; color: #ffb21a; animation: kb-sube .7s .45s ease-out both; }
+    #splash.fuera { opacity: 0; pointer-events: none; }
+    @keyframes kb-entra { from { opacity: 0; transform: scale(.8); } to { opacity: 1; transform: scale(1); } }
+    @keyframes kb-brillo { 0%, 100% { filter: drop-shadow(0 0 0 rgba(255, 178, 26, 0)); } 50% { filter: drop-shadow(0 0 26px rgba(255, 178, 26, .45)); } }
+    @keyframes kb-sube { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+    @media (prefers-reduced-motion: reduce) { #splash img, #splash .nombre { animation: none; } }
   </style>
 </head>
 <body>
-  <div id="splash"><img src="icons/icon-192.png" width="110" height="110" alt="KairosBets" /></div>
+  <div id="splash"><img src="icons/logo-480.webp" width="240" height="240" alt="" /><div class="nombre">KAIROSBETS</div></div>
   <div id="root"></div>
   <script type="module" src="./src/main.jsx"></script>
 </body>
