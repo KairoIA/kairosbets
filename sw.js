@@ -2,7 +2,7 @@
 // - La página (index.html): primero la red y, sin red, la copia guardada → las versiones nuevas llegan solas.
 // - assets/ (nombres con huella, nunca cambian) e iconos: primero la copia guardada.
 // - Lo de fuera (Google, DeepSeek, la Hoja) no se toca.
-const CACHE = "kairosbets-2";
+const CACHE = "kairosbets-3";   // 3: logo nuevo (06-oct-2026)
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(["./", "./manifest.json", "./public/icons/icon-192.png"])).catch(() => {}));
