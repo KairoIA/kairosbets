@@ -5,16 +5,16 @@
   <meta name="viewport" content="width=device-width,initial-scale=1.0" />
   <meta name="robots" content="noindex" />
   <title>KairosBets</title>
-  <!-- Desde el 06-oct-2026 KairosBets vive en https://kairoia.github.io/kb/ (mismo sitio: los datos del móvil se conservan).
-       El código sigue en este repositorio (app/); `npm run build` publica en ../kairoia.github.io/kb/. -->
-  <meta http-equiv="refresh" content="0; url=/kb/" />
+  <!-- Desde el 06-oct-2026 KairosBets vive en https://kairosbets.pages.dev (los datos se traen con «Traer mis datos»).
+       El código sigue en este repositorio (app/); `npm run build` deja la app en dist/ y se publica en Cloudflare Pages. -->
+  <meta http-equiv="refresh" content="0; url=https://kairosbets.pages.dev/" />
   <script>
-    if ("serviceWorker" in navigator) navigator.serviceWorker.getRegistrations().then((rs) => rs.forEach((r) => !r.scope.includes("/kb/") && r.unregister()));
-    location.replace("/kb/" + location.search + location.hash);
+    if ("serviceWorker" in navigator) navigator.serviceWorker.getRegistrations().then((rs) => rs.forEach((r) => (r.scope.includes("/kairosbets/") || r.scope.includes("/kb/")) && r.unregister()));
+    location.replace("https://kairosbets.pages.dev/" + location.hash);
   </script>
   <style>body{margin:0;background:#0b0b0c;color:#8b877e;font:13px ui-monospace,monospace;display:grid;place-items:center;height:100vh}a{color:#ffb21a}</style>
 </head>
 <body>
-  <p>KairosBets se ha mudado a <a href="/kb/">kairoia.github.io/kb</a></p>
+  <p>KairosBets se ha mudado a <a href="https://kairosbets.pages.dev/">kairosbets.pages.dev</a></p>
 </body>
 </html>

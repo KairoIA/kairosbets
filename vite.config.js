@@ -1,17 +1,18 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
-// El código vive en app/ y `npm run build` publica la app en ../kairoia.github.io/kb/ (repositorio de la web pública
-// de KairosLab): https://kairoia.github.io/kb/ es la dirección oficial desde el 06-oct-2026. La de antes
-// (/kairosbets/, este repo) solo redirige: Chrome del móvil de Javi se quedó con el registro de la app vieja y no dejaba
-// reinstalarla allí. Mismo sitio = mismos datos guardados. app/public/ (manifest, sw.js, icons) se copia tal cual.
-// Desde oct-2026 la app ya no se transpila en el navegador (Babel por CDN la dejó en blanco en julio).
+// El código vive en app/ y `npm run build` deja la app en dist/; se publica en Cloudflare Pages:
+//   npx wrangler@latest pages deploy dist --project-name kairosbets --branch main   (clave en variables de usuario)
+// Dirección oficial desde el 06-oct-2026: https://kairosbets.pages.dev. Antes estuvo en kairoia.github.io (/kairosbets/
+// y luego /kb/), pero en el móvil de Javi Chrome tenía una app rota apuntada para todo ese sitio y no dejaba
+// instalarla. Las direcciones viejas redirigen aquí, y kairoia.github.io/kb/traspaso.html pasa los datos.
+// app/public/ (manifest, sw.js, icons, _headers) se copia tal cual.
 export default defineConfig({
   root: "app",
   base: "./",
   plugins: [react()],
   build: {
-    outDir: "../../kairoia.github.io/kb",
+    outDir: "../dist",
     emptyOutDir: true,
     assetsDir: "assets",
     assetsInlineLimit: 0,

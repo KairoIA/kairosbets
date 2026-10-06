@@ -16,7 +16,7 @@ function Clave({ etiqueta, valor, set, ayuda, placeholder, id }) {
 }
 
 // Todo se guarda en el móvil (Javi, 05-oct-2026: «paso de excels»). Desde aquí sale a Excel cuando quiera.
-export default function Ajustes({ temporada, onVolver, onExcel, onExportar, onImportar, onRenombrar, onTemporadas }) {
+export default function Ajustes({ temporada, onVolver, onExcel, onExportar, onImportar, onTraer, onRenombrar, onTemporadas }) {
   const [ds, setDs] = useState(claveDS());
   const [gem, setGem] = useState(claveGemini());
   const [clavesOk, setClavesOk] = useState(false);
@@ -77,6 +77,9 @@ export default function Ajustes({ temporada, onVolver, onExcel, onExportar, onIm
           <button className="boton suave" onClick={onExportar}>Guardar copia</button>
           <button className="boton suave" onClick={() => archivo.current?.click()}>Cargar copia</button>
         </div>
+        <button className="enlace" style={{ marginTop: 12 }} onClick={() => onTraer().then((n) => setMsg({ ok: `Traídas ${n} temporadas. Cargando…` })).catch((e) => setMsg({ error: e.message }))}>
+          Traer los datos de la dirección anterior (kairoia.github.io)
+        </button>
         <input ref={archivo} type="file" accept="application/json,.json" style={{ display: "none" }} onChange={alImportar} />
       </div>
 

@@ -2,7 +2,7 @@
 
 **Value Betting Tracker** de KairosLab. PWA para el móvil: apuntar apuestas (a mano, con una captura o escribiéndolas), liquidarlas, seguir el bankroll por temporadas y analizarlas con IA.
 
-App: **https://kairoia.github.io/kb/** (desde el 06-oct-2026; la dirección de antes, /kairosbets/, redirige ahí)
+App: **https://kairosbets.pages.dev** (desde el 06-oct-2026; las direcciones de antes en kairoia.github.io redirigen ahí)
 
 ## Qué hace (versión 2, oct-2026)
 - **Temporadas.** Cada temporada tiene su bankroll inicial y su stake habitual. Al cerrar una, queda en el archivo y se puede consultar siempre (resumen, gráfica, historial), y la nueva empieza a cero.
@@ -17,12 +17,13 @@ Todo vive en el móvil (`localStorage`); no hay servidor ni Hoja de Google (deci
 ## Desarrollo y publicación
 ```bash
 npm install
-npm run build     # compila app/ y deja la app en ../kairoia.github.io/kb/
+npm run build     # compila app/ y deja la app en dist/
+npx wrangler@latest pages deploy dist --project-name kairosbets --branch main   # con CLOUDFLARE_API_TOKEN y CLOUDFLARE_ACCOUNT_ID
 ```
-- El código está en `app/src/`: los datos en `datos/`, las pantallas en `pantallas/` y los estilos en `estilos.css`. En `app/public/` están `manifest.json`, `sw.js` e `icons/`, que se copian tal cual.
-- **Dónde se publica:** en el repositorio de la web pública de KairosLab (`KairoIA/kairoia.github.io`, carpeta `kb/`), clonado al lado de este. Después de `npm run build` hay que subir ese repositorio. Este repo guarda el código y, en su raíz, solo la página que redirige de la dirección vieja.
-- **Por qué /kb/:** el 06-oct-2026, en el móvil de Javi, Chrome se quedó con el registro de la app vieja de /kairosbets/ («This app is already installed» → «Could not open app») y no dejaba reinstalarla. La dirección nueva está en el mismo sitio, así que los datos guardados son los mismos.
-- `sw.js` de /kb/: la página y el manifiesto van por red primero (las versiones nuevas llegan solas) y la app funciona sin conexión. Su caché se llama `kb-/kb/-N`.
+- El código está en `app/src/`: los datos en `datos/`, las pantallas en `pantallas/` y los estilos en `estilos.css`. En `app/public/` están `manifest.json`, `sw.js`, `icons/` y `_headers`, que se copian tal cual.
+- **Por qué Cloudflare y no GitHub Pages:** el 06-oct-2026, en el móvil de Javi, Chrome tenía apuntada una app rota para todo kairoia.github.io. Al instalar salía «This app is already installed» y luego «Could not open app», aunque no aparecía en Aplicaciones. Cambiar la dirección dentro de ese sitio no sirvió.
+- **Datos:** el navegador los guarda por sitio, así que se quedaron en kairoia.github.io. El botón «Traer mis datos» de la app abre `kairoia.github.io/kb/traspaso.html` (en el repo `KairoIA/kairoia.github.io`), que manda temporadas, apuestas y claves de IA solo a esta app. Fuera de ese caso, la página ofrece descargar una copia.
+- La raíz de este repo (/kairosbets/) y `kairoia.github.io/kb/` solo redirigen, y sus service workers se dan de baja solos.
 
 ---
 *KairosLab · 2026*

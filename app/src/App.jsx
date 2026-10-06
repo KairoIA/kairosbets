@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from "react";
 import { cargar, guardarApuestas, guardarTemporadas, siguienteId, exportar, importar, limpiar } from "./datos/almacen.js";
 import { conBankroll, resumen } from "./datos/calculos.js";
 import { libroExcel } from "./datos/excel.js";
+import { traerDeAnterior, guardarTraspaso } from "./datos/traspaso.js";
 import { hoy } from "./datos/util.js";
 import { LOGO } from "./piezas/comunes.jsx";
 import Inicio from "./pantallas/Inicio.jsx";
@@ -18,6 +19,27 @@ const PESTANAS = [
   { id: "historial", txt: "Historial", ico: "≡" },
   { id: "ia", txt: "IA", ico: "✦" },
 ];
+
+// Botón de la primera vez: trae lo que había en la dirección anterior
+function Traer({ onTraer }) {
+  const [estado, setEstado] = useState(null);
+  const pulsar = async () => {
+    setEstado({ cargando: true });
+    try {
+      const n = await onTraer();
+      setEstado({ ok: `Listo: ${n} temporada${n === 1 ? "" : "s"}. Cargando…` });
+    } catch (e) {
+      setEstado({ error: e.message });
+    }
+  };
+  return (
+    <>
+      {estado?.error && <div className="error">{estado.error}</div>}
+      {estado?.ok && <div className="ok-msg">{estado.ok}</div>}
+      <button className="boton" disabled={estado?.cargando} onClick={pulsar}>{estado?.cargando ? "Trayendo tus datos…" : "Traer mis datos de la dirección anterior"}</button>
+    </>
+  );
+}
 
 export default function App() {
   const [datos, setDatos] = useState(() => cargar());
@@ -80,6 +102,13 @@ export default function App() {
   const bajarExcel = (compartir) => entregar(libroExcel(datos.temporadas, datos.apuestas), `KairosBets_${hoy()}.xlsx`, compartir);
   const bajarCopia = () => entregar(new Blob([exportar(datos.temporadas, datos.apuestas)], { type: "application/json" }), `kairosbets_copia_${hoy()}.json`);
 
+  // Traer temporadas, apuestas y claves de la dirección anterior (kairoia.github.io); ver datos/traspaso.js
+  async function traer() {
+    const n = guardarTraspaso(await traerDeAnterior());
+    setTimeout(() => location.reload(), 300);
+    return n;
+  }
+
   async function cargarCopia(texto) {
     const d = importar(texto);
     setDatos(d);
@@ -107,7 +136,7 @@ export default function App() {
   };
 
   const ajustes = (
-    <Ajustes temporada={activa} onVolver={() => setVista(null)} onExcel={bajarExcel} onExportar={bajarCopia} onImportar={cargarCopia}
+    <Ajustes temporada={activa} onVolver={() => setVista(null)} onExcel={bajarExcel} onExportar={bajarCopia} onImportar={cargarCopia} onTraer={traer}
       onRenombrar={renombrar} onTemporadas={() => setVista({ tipo: "temporadas" })} />
   );
 
@@ -116,12 +145,16 @@ export default function App() {
     return (
       <div className="app">
         {vista?.tipo === "ajustes" ? ajustes : (
-          <>
-            <EmpezarTemporada primera siguienteNombre="Temporada 1" onEmpezar={empezarTemporada} />
-            <div className="pad" style={{ position: "absolute", bottom: 10, left: 0, right: 0 }}>
-              <button className="boton suave" onClick={() => setVista({ tipo: "ajustes" })}>¿Ya tenías apuestas? Carga tu copia de seguridad</button>
+          <div className="scroll">
+            <div className="pad" style={{ paddingBottom: 4 }}>
+              <div className="titulo">KairosBets, casa nueva</div>
+              <div className="explica">¿Ya usabas KairosBets? Trae tus temporadas, apuestas y claves de IA de la dirección anterior con un toque. Hazlo desde Chrome, antes de instalar la app.</div>
+              <Traer onTraer={traer} />
+              <button className="enlace" style={{ marginTop: 12 }} onClick={() => setVista({ tipo: "ajustes" })}>O carga una copia de seguridad</button>
             </div>
-          </>
+            <div className="sep" style={{ margin: "18px 0 0" }} />
+            <EmpezarTemporada primera siguienteNombre="Temporada 1" onEmpezar={empezarTemporada} />
+          </div>
         )}
       </div>
     );
