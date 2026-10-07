@@ -4,7 +4,7 @@
 // - assets/ (nombres con huella) e iconos: primero la copia guardada.
 // - Lo de fuera (Google, DeepSeek) no se toca.
 // La caché lleva el nombre de su carpeta («kb-/-N»), por si algún día conviven dos copias en un mismo sitio.
-const VERSION = 7;
+const VERSION = 8;
 const PREFIJO = "kb-" + new URL(self.registration.scope).pathname + "-";
 const CACHE = PREFIJO + VERSION;
 

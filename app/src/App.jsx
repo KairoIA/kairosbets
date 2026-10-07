@@ -113,6 +113,7 @@ export default function App() {
     const d = importar(texto);
     setDatos(d);
     setVerId(d.temporadas.activa);
+    return d.mensaje;          // solo los paquetes de apuestas traen mensaje (cuántas nuevas / actualizadas)
   }
 
   // Deslizar entre pestañas (no si el dedo empieza en los filtros o en la gráfica)

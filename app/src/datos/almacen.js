@@ -60,8 +60,32 @@ export function exportar(temporadas, apuestas) {
   return JSON.stringify({ app: "KairosBets", version: 2, fecha: new Date().toISOString(), temporadas, apuestas }, null, 2);
 }
 
+// Paquete de apuestas que prepara Claude en el VDS: { app: "KairosBets", tipo: "paquete", fecha, apuestas: [...] }.
+// NO sustituye nada: se FUSIONA en la temporada activa por id (ids estables, p. ej. "vA20261010"). Una apuesta nueva se añade;
+// una que ya está y sigue «en juego» se actualiza (así llega su resultado); una ya liquidada en el móvil no se toca nunca.
+export function fusionarPaquete(d) {
+  const temporadas = leerJSON(TEMPORADAS);
+  const id = temporadas?.activa;
+  if (!id) throw new Error("No hay temporada activa donde añadir las apuestas");
+  const mapa = new Map((leerJSON(APUESTAS(id), []) || []).map(limpiar).map((b) => [b.id, b]));
+  let nuevas = 0, actualizadas = 0, intactas = 0;
+  for (const crudo of d.apuestas || []) {
+    if (!crudo?.id) continue;
+    const b = limpiar(crudo);
+    const ya = mapa.get(b.id);
+    if (!ya) { mapa.set(b.id, b); nuevas++; }
+    else if (ya.result === "pending" && JSON.stringify(ya) !== JSON.stringify(b)) { mapa.set(b.id, { ...ya, ...b }); actualizadas++; }
+    else intactas++;
+  }
+  guardarApuestas(id, [...mapa.values()]);
+  const r = cargar();
+  r.mensaje = `Paquete añadido a «${temporadas.lista.find((t) => t.id === id)?.nombre || id}»: ${nuevas} nuevas, ${actualizadas} actualizadas${intactas ? `, ${intactas} ya estaban` : ""}.`;
+  return r;
+}
+
 export function importar(texto) {
   const d = JSON.parse(texto);
+  if (d?.app === "KairosBets" && d.tipo === "paquete" && Array.isArray(d.apuestas)) return fusionarPaquete(d);
   if (!d || d.app !== "KairosBets" || !d.temporadas?.lista) throw new Error("Este archivo no es una copia de KairosBets");
   for (const t of d.temporadas.lista) guardarApuestas(t.id, d.apuestas?.[t.id] || []);
   guardarTemporadas(d.temporadas);

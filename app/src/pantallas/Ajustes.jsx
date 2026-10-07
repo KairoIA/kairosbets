@@ -30,8 +30,8 @@ export default function Ajustes({ temporada, onVolver, onExcel, onExportar, onIm
     const f = ev.target.files?.[0];
     if (!f) return;
     try {
-      await onImportar(await f.text());
-      setMsg({ ok: "Copia cargada." });
+      const r = await onImportar(await f.text());
+      setMsg({ ok: r || "Copia cargada." });
     } catch (e) {
       setMsg({ error: e.message });
     }
@@ -69,13 +69,13 @@ export default function Ajustes({ temporada, onVolver, onExcel, onExportar, onIm
       <div className="caja">
         <b className="caja-titulo">Copia de seguridad</b>
         <div className="explica" style={{ marginBottom: 12 }}>
-          Tus apuestas viven solo en este móvil. Esta copia sirve para pasarlas a otro móvil o recuperarlas si se borran los datos de la app. Guárdala en Drive o mándatela por Telegram de vez en cuando.
+          Tus apuestas viven solo en este móvil. Esta copia sirve para pasarlas a otro móvil o recuperarlas si se borran los datos de la app. Guárdala en Drive o mándatela por Telegram de vez en cuando. «Cargar copia» también acepta los paquetes de apuestas que prepara Claude: los añade a la temporada activa sin borrar nada.
         </div>
         {msg?.error && <div className="error">{msg.error}</div>}
         {msg?.ok && <div className="ok-msg">{msg.ok}</div>}
         <div className="dos">
           <button className="boton suave" onClick={onExportar}>Guardar copia</button>
-          <button className="boton suave" onClick={() => archivo.current?.click()}>Cargar copia</button>
+          <button className="boton suave" onClick={() => archivo.current?.click()}>Cargar copia o paquete</button>
         </div>
         <button className="enlace" style={{ marginTop: 12 }} onClick={() => onTraer().then((n) => setMsg({ ok: `Traídas ${n} temporadas. Cargando…` })).catch((e) => setMsg({ error: e.message }))}>
           Traer los datos de la dirección anterior (kairoia.github.io)
