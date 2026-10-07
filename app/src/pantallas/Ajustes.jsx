@@ -1,25 +1,7 @@
 import { useRef, useState } from "react";
-import { claveDS, claveGemini, ponerClaves } from "../datos/ia.js";
-
-function Clave({ etiqueta, valor, set, ayuda, placeholder, id }) {
-  const [ver, setVer] = useState(false);
-  return (
-    <div className="campo">
-      <label className="etiqueta" htmlFor={id}>{etiqueta}</label>
-      <div style={{ position: "relative" }}>
-        <input id={id} className="entrada mono" style={{ fontSize: 12, paddingRight: 64 }} type={ver ? "text" : "password"} value={valor} onChange={(e) => set(e.target.value)} placeholder={placeholder} />
-        <button className="tenue" style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", fontSize: 10 }} onClick={() => setVer(!ver)}>{ver ? "OCULTAR" : "VER"}</button>
-      </div>
-      <div className="tenue" style={{ fontSize: 10.5, marginTop: 6 }}>{ayuda}</div>
-    </div>
-  );
-}
 
 // Todo se guarda en el móvil (Javi, 05-oct-2026: «paso de excels»). Desde aquí sale a Excel cuando quiera.
 export default function Ajustes({ temporada, onVolver, onExcel, onExportar, onImportar, onTraer, onRenombrar, onTemporadas }) {
-  const [ds, setDs] = useState(claveDS());
-  const [gem, setGem] = useState(claveGemini());
-  const [clavesOk, setClavesOk] = useState(false);
   const [nombre, setNombre] = useState(temporada?.nombre || "");
   const [stake, setStake] = useState(String(temporada?.stake || ""));
   const [msg, setMsg] = useState(null);
@@ -83,13 +65,6 @@ export default function Ajustes({ temporada, onVolver, onExcel, onExportar, onIm
         <input ref={archivo} type="file" accept="application/json,.json" style={{ display: "none" }} onChange={alImportar} />
       </div>
 
-      <div className="caja">
-        <b className="caja-titulo">IA</b>
-        <Clave id="aj-ds" etiqueta="Clave de DeepSeek" valor={ds} set={setDs} placeholder="sk-…" ayuda="Análisis, crónica y apuestas escritas." />
-        <Clave id="aj-gem" etiqueta="Clave de Gemini" valor={gem} set={setGem} placeholder="AIza…" ayuda="Leer capturas de apuestas." />
-        <button className={`boton ${clavesOk ? "hecho" : ""}`} onClick={() => { ponerClaves(ds, gem); setClavesOk(true); setTimeout(() => setClavesOk(false), 1500); }}>{clavesOk ? "✓ Guardadas" : "Guardar claves"}</button>
-        <div className="tenue" style={{ fontSize: 10.5, marginTop: 8 }}>Se guardan solo en este móvil.</div>
-      </div>
       <div className="tenue" style={{ fontSize: 10, textAlign: "center", marginTop: 6, letterSpacing: 1 }}>KAIROSBETS · VERSIÓN 2 (OCT-2026)</div>
       <div className="hueco" />
     </div>

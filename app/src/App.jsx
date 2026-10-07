@@ -7,7 +7,6 @@ import { hoy } from "./datos/util.js";
 import { LOGO } from "./piezas/comunes.jsx";
 import Inicio from "./pantallas/Inicio.jsx";
 import { PestanaGrafica, PestanaHistorial } from "./pantallas/Graficas.jsx";
-import PestanaIA from "./pantallas/IA.jsx";
 import { Detalle, NuevaApuesta } from "./pantallas/Formularios.jsx";
 import { ListaTemporadas, EmpezarTemporada } from "./pantallas/Temporadas.jsx";
 import Ajustes from "./pantallas/Ajustes.jsx";
@@ -17,7 +16,6 @@ const PESTANAS = [
   { id: "inicio", txt: "Inicio", ico: "◆" },
   { id: "grafica", txt: "Gráfica", ico: "∿" },
   { id: "historial", txt: "Historial", ico: "≡" },
-  { id: "ia", txt: "IA", ico: "✦" },
 ];
 
 // Botón de la primera vez: trae lo que había en la dirección anterior
@@ -125,7 +123,7 @@ export default function App() {
   const bajarExcel = (compartir) => entregar(libroExcel(datos.temporadas, datos.apuestas), `KairosBets_${hoy()}.xlsx`, compartir);
   const bajarCopia = () => entregar(new Blob([exportar(datos.temporadas, datos.apuestas)], { type: "application/json" }), `kairosbets_copia_${hoy()}.json`);
 
-  // Traer temporadas, apuestas y claves de la dirección anterior (kairoia.github.io); ver datos/traspaso.js
+  // Traer temporadas y apuestas de la dirección anterior (kairoia.github.io); ver datos/traspaso.js
   async function traer() {
     const n = guardarTraspaso(await traerDeAnterior());
     setTimeout(() => location.reload(), 300);
@@ -199,7 +197,7 @@ export default function App() {
           <div className="scroll">
             <div className="pad" style={{ paddingBottom: 4 }}>
               <div className="titulo">KairosBets, casa nueva</div>
-              <div className="explica">¿Ya usabas KairosBets? Trae tus temporadas, apuestas y claves de IA de la dirección anterior con un toque. Hazlo desde Chrome, antes de instalar la app.</div>
+              <div className="explica">¿Ya usabas KairosBets? Trae tus temporadas y apuestas de la dirección anterior con un toque. Hazlo desde Chrome, antes de instalar la app.</div>
               <Traer onTraer={traer} />
               <button className="enlace" style={{ marginTop: 12 }} onClick={() => setVista({ tipo: "ajustes" })}>O carga una copia de seguridad</button>
             </div>
@@ -248,7 +246,6 @@ export default function App() {
                 {p.id === "inicio" && <Inicio temporada={temporada} bets={bets} r={r} archivo={archivo} onBet={(b) => setVista({ tipo: "detalle", id: b.id })} onLiquidar={liquidar} />}
                 {p.id === "grafica" && <PestanaGrafica temporada={temporada} bets={bets} r={r} onBet={(b) => setVista({ tipo: "detalle", id: b.id })} />}
                 {p.id === "historial" && <PestanaHistorial bets={bets} onBet={(b) => setVista({ tipo: "detalle", id: b.id })} />}
-                {p.id === "ia" && <PestanaIA bets={bets} onAjustes={() => setVista({ tipo: "ajustes" })} />}
               </div>
             ))}
           </div>

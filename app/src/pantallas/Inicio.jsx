@@ -45,7 +45,7 @@ export default function Inicio({ temporada, bets, r, onBet, onLiquidar, archivo 
       {!bets.length && (
         <div className="seccion" style={{ display: "block", padding: "28px 18px" }}>
           <div className="titulo" style={{ fontSize: 26 }}>Temporada a cero</div>
-          <div className="explica">Apunta la primera apuesta con el botón +: a mano, con una captura o escribiéndola.</div>
+          <div className="explica">Apunta la primera apuesta con el botón +, o mándale el pantallazo a Kaira y te pasa un enlace.</div>
         </div>
       )}
 

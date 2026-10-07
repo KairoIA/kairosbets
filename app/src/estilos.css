@@ -191,16 +191,4 @@ textarea.entrada { resize: none; line-height: 1.5; }
 .bloque.consejo { border-left: 3px solid var(--ambar); }
 .subtitulo { font-size: 9.5px; color: var(--tenue); letter-spacing: 1.6px; text-transform: uppercase; margin: 20px 0 10px; }
 
-/* Crónica semanal (el «Kairos Times»): página de periódico dentro del marcador */
-.periodico { background: #f3efe6; color: #1b1a17; padding: 16px; font-family: "Lora", Georgia, serif; border-radius: 2px; }
-.periodico .cab { text-align: center; border-top: 2px solid #1b1a17; border-bottom: 1px solid #1b1a17; padding: 6px 0; }
-.periodico .cab h2 { font: 900 30px/1 "Playfair Display", Georgia, serif; letter-spacing: 1px; padding: 6px 0; }
-.periodico .min { font-size: 8px; color: #6b665c; letter-spacing: 2px; text-transform: uppercase; font-family: var(--mono); }
-.periodico h3 { font: italic 700 22px/1.25 "Playfair Display", Georgia, serif; text-align: center; margin: 14px 0 8px; }
-.periodico p { font-size: 13px; line-height: 1.75; margin-bottom: 10px; text-align: justify; }
-.periodico .seccion-p { font: 700 10px var(--mono); letter-spacing: 2px; text-transform: uppercase; margin: 14px 0 6px; color: #8a5a00; }
-.periodico .leccion { padding: 10px 14px; border-left: 3px solid #b8860b; font-style: italic; margin: 12px 0; background: rgba(184, 134, 11, 0.08); }
-.periodico .cifras-p { display: flex; justify-content: center; gap: 18px; padding: 10px 0; border-bottom: 1px solid #1b1a17; }
-.periodico .pos { color: #1f7a45; } .periodico .neg { color: #b3261e; }
-
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }

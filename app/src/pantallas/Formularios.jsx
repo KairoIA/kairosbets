@@ -1,6 +1,5 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { estado, beneficio } from "../datos/calculos.js";
-import { leerFoto, leerTexto, claveDS, claveGemini } from "../datos/ia.js";
 import { hoy, fechaCorta, signo, nuevoId } from "../datos/util.js";
 import { Insignia } from "../piezas/comunes.jsx";
 
@@ -120,47 +119,12 @@ export function Detalle({ bet, onVolver, onGuardar, onBorrar }) {
 export function NuevaApuesta({ temporada, onVolver, onGuardar }) {
   const [d, setD] = useState({ date: hoy(), type: "Combinada", desc: "", odds: "", stake: String(temporada.stake || 15), result: "pending", notes: "" });
   const [retorno, setRetorno] = useState("");
-  const [modo, setModo] = useState("manual");
-  const [texto, setTexto] = useState("");
-  const [ia, setIa] = useState({ cargando: false, error: null });
   const [hecho, setHecho] = useState(false);
-  const foto = useRef(null);
   const set = (x) => setD((v) => ({ ...v, ...x }));
   const stake = parseFloat(d.stake) || 0;
   const pl = beneficio(d.result, stake, retorno);
   const valido = d.desc.trim() && parseFloat(d.odds) > 0 && stake > 0 && (d.result === "pending" || d.result === "loss" || pl != null);
 
-  const rellenar = (x) => {
-    set({
-      type: x.type === "Simple" ? "Simple" : "Combinada",
-      desc: x.desc || "",
-      odds: x.odds ? String(x.odds) : "",
-      stake: x.stake ? String(x.stake) : d.stake,
-      date: /^\d{4}-\d{2}-\d{2}$/.test(x.date || "") ? x.date : d.date,
-      notes: x.notes || "",
-    });
-    setModo("manual");
-  };
-  const conIA = async (fn) => {
-    setIa({ cargando: true, error: null });
-    try {
-      rellenar(await fn());
-      setIa({ cargando: false, error: null });
-    } catch (e) {
-      setIa({ cargando: false, error: e.message });
-    }
-  };
-  const alFoto = (ev) => {
-    const f = ev.target.files?.[0];
-    if (!f) return;
-    if (!claveGemini()) return setIa({ cargando: false, error: "Falta la clave de Gemini: Ajustes → IA" });
-    conIA(() => leerFoto(f, temporada.stake)).finally(() => { if (foto.current) foto.current.value = ""; });
-  };
-  const alTexto = () => {
-    if (!texto.trim()) return;
-    if (!claveDS()) return setIa({ cargando: false, error: "Falta la clave de DeepSeek: Ajustes → IA" });
-    conIA(() => leerTexto(texto, temporada.stake));
-  };
   const guardar = () => {
     if (!valido) return;
     onGuardar({ id: nuevoId(), ...d, odds: parseFloat(d.odds), stake, pl: d.result === "pending" ? null : pl });
@@ -172,27 +136,6 @@ export function NuevaApuesta({ temporada, onVolver, onGuardar }) {
     <div className="scroll pad">
       <button className="volver" onClick={onVolver}>← Volver</button>
       <div className="titulo" style={{ marginBottom: 14 }}>Nueva apuesta</div>
-      <div className="opciones tres campo">
-        {[["manual", "✎ A mano"], ["foto", "📷 Captura"], ["texto", "💬 Escrita"]].map(([id, txt]) => (
-          <button key={id} className={`opcion ${modo === id ? "activa" : ""}`} onClick={() => setModo(id)}>{txt}</button>
-        ))}
-      </div>
-      {modo === "foto" && (
-        <div className="caja" style={{ textAlign: "center", borderStyle: "dashed" }}>
-          <div style={{ fontSize: 13, marginBottom: 4 }}>Sube la captura de la apuesta</div>
-          <div className="explica" style={{ marginBottom: 12 }}>Bet365, Betfair… La IA saca las patas, cuotas y stake.</div>
-          <input ref={foto} id="kb-foto" type="file" accept="image/*" onChange={alFoto} style={{ display: "none" }} />
-          <label htmlFor="kb-foto" className="boton" style={{ display: "inline-block", width: "auto", padding: "10px 22px" }}>{ia.cargando ? "Leyendo…" : "Elegir imagen"}</label>
-        </div>
-      )}
-      {modo === "texto" && (
-        <div className="caja">
-          <textarea className="entrada" rows={3} value={texto} onChange={(e) => setTexto(e.target.value)} placeholder="ej: combinada Betis gana a 1.85 y over 2.5 del Girona a 1.90, 15 euros" style={{ marginBottom: 10 }} />
-          <button className="boton" disabled={!texto.trim() || ia.cargando} onClick={alTexto}>{ia.cargando ? "Leyendo…" : "Rellenar con IA"}</button>
-        </div>
-      )}
-      {ia.cargando && <div className="cargando" style={{ marginBottom: 14 }} />}
-      {ia.error && <div className="error">{ia.error}</div>}
       <DatosApuesta d={d} set={set} />
       <div className="campo">
         <span className="etiqueta">Resultado</span>
