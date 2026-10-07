@@ -46,22 +46,29 @@ export default function App() {
   const [verId, setVerId] = useState(() => datos.temporadas?.activa || null);
   const [tab, setTab] = useState("inicio");
   const [vista, setVista] = useState(null);
-  // Enlace de Kaira con una apuesta ya lista para fusionar (07-oct-2026): se procesa una sola vez al
-  // abrir, se enseña un aviso con el resultado y se limpia el hash para que un refresco no la repita.
+  // Enlace de Kaira con una apuesta lista para fusionar (07-oct-2026, ampliado el mismo día: antes se
+  // fusionaba sola al abrir el enlace, sin que Javi pudiera decir que no — ahora se enseña ANTES de
+  // tocar nada, y solo se guarda si él lo confirma). Se lee una sola vez al abrir y se limpia el hash
+  // para que un refresco no la repita ni la vuelva a preguntar.
+  const [confirmarPaquete, setConfirmarPaquete] = useState(null);
   const [avisoPaquete, setAvisoPaquete] = useState(null);
   useEffect(() => {
     const paquete = leerPaqueteDeURL();
     if (!paquete) return;
     history.replaceState(null, "", location.pathname + location.search);
+    setConfirmarPaquete(paquete);
+  }, []);
+  function aceptarPaquete() {
     try {
-      const r = fusionarPaquete(paquete);
+      const r = fusionarPaquete(confirmarPaquete);
       setDatos(r);
       setVerId(r.temporadas.activa);
       setAvisoPaquete({ ok: r.mensaje });
     } catch (e) {
       setAvisoPaquete({ error: e.message });
     }
-  }, []);
+    setConfirmarPaquete(null);
+  }
   const temporadas = datos.temporadas;
   const activa = temporadas?.lista.find((t) => t.id === temporadas.activa);
   const temporada = temporadas?.lista.find((t) => t.id === verId) || activa;
@@ -156,6 +163,33 @@ export default function App() {
     <Ajustes temporada={activa} onVolver={() => setVista(null)} onExcel={bajarExcel} onExportar={bajarCopia} onImportar={cargarCopia} onTraer={traer}
       onRenombrar={renombrar} onTemporadas={() => setVista({ tipo: "temporadas" })} />
   );
+
+  // Enlace de Kaira esperando confirmación (07-oct-2026): se enseña ANTES de tocar ningún dato, con
+  // prioridad sobre cualquier otra pantalla — también sobre "casa nueva", donde fusionar sin temporada
+  // activa daría error igualmente.
+  if (confirmarPaquete) {
+    return (
+      <div className="app">
+        <div className="scroll">
+          <div className="pad">
+            <div className="titulo">Kaira te manda una apuesta</div>
+            <div className="explica">
+              {confirmarPaquete.apuestas.length} apuesta{confirmarPaquete.apuestas.length === 1 ? "" : "s"} para añadir a tu temporada activa:
+            </div>
+            {confirmarPaquete.apuestas.map((b, i) => (
+              <div key={i} className="aviso-archivo" style={{ marginTop: 10 }}>
+                <span>{b.desc || "(sin descripción)"} · cuota {b.odds} · {b.stake} €</span>
+              </div>
+            ))}
+            <div className="fila" style={{ gap: 10, marginTop: 16 }}>
+              <button className="boton" onClick={aceptarPaquete}>Añadir</button>
+              <button className="enlace" onClick={() => setConfirmarPaquete(null)}>No, descartar</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Sin temporadas: primera vez (o móvil nuevo)
   if (!temporadas) {
