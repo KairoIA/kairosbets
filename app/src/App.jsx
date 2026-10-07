@@ -1,5 +1,5 @@
-import { useMemo, useRef, useState } from "react";
-import { cargar, guardarApuestas, guardarTemporadas, siguienteId, exportar, importar, limpiar } from "./datos/almacen.js";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { cargar, guardarApuestas, guardarTemporadas, siguienteId, exportar, importar, limpiar, leerPaqueteDeURL, fusionarPaquete } from "./datos/almacen.js";
 import { conBankroll, resumen } from "./datos/calculos.js";
 import { libroExcel } from "./datos/excel.js";
 import { traerDeAnterior, guardarTraspaso } from "./datos/traspaso.js";
@@ -46,6 +46,22 @@ export default function App() {
   const [verId, setVerId] = useState(() => datos.temporadas?.activa || null);
   const [tab, setTab] = useState("inicio");
   const [vista, setVista] = useState(null);
+  // Enlace de Kaira con una apuesta ya lista para fusionar (07-oct-2026): se procesa una sola vez al
+  // abrir, se enseña un aviso con el resultado y se limpia el hash para que un refresco no la repita.
+  const [avisoPaquete, setAvisoPaquete] = useState(null);
+  useEffect(() => {
+    const paquete = leerPaqueteDeURL();
+    if (!paquete) return;
+    history.replaceState(null, "", location.pathname + location.search);
+    try {
+      const r = fusionarPaquete(paquete);
+      setDatos(r);
+      setVerId(r.temporadas.activa);
+      setAvisoPaquete({ ok: r.mensaje });
+    } catch (e) {
+      setAvisoPaquete({ error: e.message });
+    }
+  }, []);
   const temporadas = datos.temporadas;
   const activa = temporadas?.lista.find((t) => t.id === temporadas.activa);
   const temporada = temporadas?.lista.find((t) => t.id === verId) || activa;
@@ -181,6 +197,12 @@ export default function App() {
         <div className="aviso-archivo">
           <span>Archivo · {temporada.nombre}</span>
           <button onClick={() => setVerId(temporadas.activa)}>Volver a {activa.nombre}</button>
+        </div>
+      )}
+      {avisoPaquete && !vista && (
+        <div className={avisoPaquete.error ? "error" : "ok-msg"} style={{ margin: "10px 14px 0" }}>
+          {avisoPaquete.error || avisoPaquete.ok}
+          <button className="enlace" style={{ marginLeft: 10 }} onClick={() => setAvisoPaquete(null)}>Vale</button>
         </div>
       )}
 

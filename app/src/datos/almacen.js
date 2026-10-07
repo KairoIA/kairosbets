@@ -91,3 +91,18 @@ export function importar(texto) {
   guardarTemporadas(d.temporadas);
   return cargar();
 }
+
+// Paquete que llega por enlace, no por archivo (07-oct-2026, Javi: Kaira interpreta una captura de
+// apuesta y manda un enlace que abre KairosBets ya con los datos listos para fusionar). Va en el
+// fragmento de la URL (#paquete=<base64>), no en la query: el fragmento nunca llega al servidor que
+// sirve la página (es estática en Cloudflare Pages), así que la apuesta no pasa por ningún log.
+export function leerPaqueteDeURL() {
+  const m = location.hash.match(/paquete=([^&]+)/);
+  if (!m) return null;
+  try {
+    const texto = decodeURIComponent(escape(atob(decodeURIComponent(m[1]))));
+    const d = JSON.parse(texto);
+    if (d?.app === "KairosBets" && d.tipo === "paquete" && Array.isArray(d.apuestas)) return d;
+  } catch { /* enlace roto o manipulado: se ignora, no se intenta adivinar */ }
+  return null;
+}
