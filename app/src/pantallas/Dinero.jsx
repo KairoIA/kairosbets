@@ -4,7 +4,8 @@ import { hoy, fechaCorta, euros, pct, nuevoId } from "../datos/util.js";
 
 // Tu dinero (12-oct-2026, Javi: «la primera apuesta se pierde, me deja en −15 y tengo que poner otros 15… quiero
 // ver lo que ha salido de mi bolsillo, lo que voy retirando y el ROI sobre lo que he puesto»).
-// Meter = dinero de su bolsillo a la cuenta; retirar = de la cuenta a su bolsillo. Ninguno es ganancia ni pérdida.
+// Meter = dinero de su bolsillo al bankroll del método; retirar = del bankroll a su bolsillo. Ninguno es ganancia ni pérdida.
+// El bankroll que vale es el de la app, NO el saldo de bet365 (Javi echa allí otras apuestas fuera del método).
 export default function Dinero({ temporada, r, onVolver, onGuardar, onBorrar }) {
   const [tipo, setTipo] = useState("ingreso");
   const [importe, setImporte] = useState(String(temporada.stake || 15));
@@ -29,12 +30,12 @@ export default function Dinero({ temporada, r, onVolver, onGuardar, onBorrar }) 
     <div className="scroll pad">
       <button className="volver" onClick={onVolver}>← Volver</button>
       <div className="titulo">Tu dinero</div>
-      <div className="explica">Lo que sale de tu bolsillo a la cuenta y lo que vas retirando. No cuenta como ganancia ni como pérdida: el ROI se calcula sobre lo que has puesto.</div>
+      <div className="explica">Lo que pones de tu bolsillo para el método y lo que vas retirando. No cuenta como ganancia ni como pérdida: el ROI se calcula sobre lo que has puesto.</div>
 
       <div className="dinero" style={{ padding: "4px 0 0" }}>
         <div><span className="etiqueta">De tu bolsillo</span><b>{r.puesto.toFixed(2)}<small> €</small></b></div>
         <div><span className="etiqueta">Retirado</span><b>{r.retirado.toFixed(2)}<small> €</small></b></div>
-        <div><span className="etiqueta">En la cuenta</span><b className="ambar">{r.bankroll.toFixed(2)}<small> €</small></b></div>
+        <div><span className="etiqueta">Bankroll</span><b className="ambar">{r.bankroll.toFixed(2)}<small> €</small></b></div>
         <div>
           <span className="etiqueta">ROI</span>
           <b className={r.roiInicial > 0 ? "pos" : r.roiInicial < 0 ? "neg" : ""}>{r.roiInicial == null ? "—" : pct(r.roiInicial)}</b>

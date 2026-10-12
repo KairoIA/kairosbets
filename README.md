@@ -16,7 +16,7 @@ Los datos viven en el móvil (`localStorage`); no hay Hoja de Google (decisión 
 
 ## Tu dinero (12-oct-2026)
 Javi: «la primera apuesta se pierde, me deja en −15 y tengo que poner otros 15; quiero ver lo que sale de mi bolsillo, lo que voy retirando y el ROI sobre lo que he puesto». Cada temporada lleva `movimientos` (`{id, fecha, tipo: ingreso|retirada, importe, nota}`, dentro de `kairosbets_temporadas`).
-- **De tu bolsillo** = bankroll inicial + ingresos. **Bankroll** = lo que hay en la cuenta (de tu bolsillo − retirado + neto), así cuadra con el saldo de bet365. **ROI** = neto ÷ de tu bolsillo.
+- **De tu bolsillo** = bankroll inicial + ingresos. **Bankroll** = el del método (de tu bolsillo − retirado + neto). El que vale es el de la app: el saldo de bet365 no sirve para compararlo (Javi echa allí otras apuestas fuera del método). **ROI** = neto ÷ de tu bolsillo.
 - Meter o retirar no es ganar ni perder: los drawdowns de la Gráfica van solo con resultados (`rinde`).
 - Se apunta en la pantalla «Tu dinero» (tocar «De tu bolsillo…» en el Inicio) o desde el VDS: `Bets/kairosbets_nube.py dinero meter|retirar <importe> --fecha … --nota …`.
 

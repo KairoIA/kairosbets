@@ -34,7 +34,7 @@ export function dinero(inicial, movimientos = []) {
   return { ingresos, retirado, puesto: redondear((inicial || 0) + ingresos) };
 }
 
-// Cada apuesta liquidada con el bankroll que deja detrás: «bankroll» = lo que hay en la cuenta (con lo que metió o
+// Cada apuesta liquidada con el bankroll que deja detrás: «bankroll» = el del método (con lo que metió o
 // retiró Javi hasta esa fecha; el mismo día, el dinero va antes que las apuestas) y «rinde» = bankroll inicial + neto
 // acumulado, sin ingresos ni retiradas (para el máximo y los drawdowns: retirar no es perder).
 export function conBankroll(bets, inicial, movimientos = []) {
@@ -69,7 +69,7 @@ export function racha(bets) {
 // Todo lo que enseña el inicio (nombres elegidos por Javi el 05-oct-2026):
 //   yield = beneficio ÷ total apostado (lo bien que apuesta; el «ROI» de las casas y los tipsters)
 //   ROI   = beneficio ÷ lo que ha salido de su bolsillo (bankroll inicial + lo que fue metiendo; 12-oct-2026)
-//   bankroll = lo que hay en la cuenta: puesto − retirado + neto (cuadra con el saldo de bet365)
+//   bankroll = el del método: puesto − retirado + neto (el que vale es este; el saldo de bet365 NO, Javi echa allí otras apuestas)
 export function resumen(bets, inicial, movimientos = []) {
   const hechas = bets.filter(liquidada);
   const enJuego = bets.filter((b) => b.result === "pending");
