@@ -25,7 +25,8 @@
 // Cambios de Claude (12-oct-2026, Javi: «corrígelo tú, deberías tener poder para modificar las cosas de la app»).
 // Claude deja cambios en una bandeja (KV «cambios») y la app los aplica al abrirse o mientras está abierta, avisa de
 // lo que cambió con «Deshacer» y lo confirma (sale de la bandeja y queda en «cambios_hechos», las 200 últimas).
-//   POST /api/copia/cambios          lector  {cambios: [{tipo:"actualizar", id, campos, motivo} | {tipo:"anadir", apuesta, motivo}]}
+//   POST /api/copia/cambios          lector  {cambios: [{tipo:"actualizar", id, campos, motivo} | {tipo:"anadir", apuesta, motivo}
+//                                             | {tipo:"movimiento", movimiento: {id, fecha, tipo: ingreso|retirada, importe, nota}, motivo}]}
 //   GET  /api/copia/cambios          ambos   la bandeja
 //   POST /api/copia/cambios/hechos   móvil   {hechos: [{cid, resultado}]}
 //   POST /api/copia/cambios/anular   lector  {cids}: quita cambios que aún no ha cogido el móvil
@@ -144,7 +145,13 @@ async function ponerCambios(request, env) {
     else if (c?.tipo === "anadir") {
       const { id, ...resto } = c.apuesta || {};
       fallo = !id ? "la apuesta nueva necesita id" : validarCampos(resto) || (!resto.desc || !(Number(resto.odds) > 0) || !(Number(resto.stake) > 0) ? "a la apuesta nueva le falta desc, odds o stake" : null);
-    } else fallo = "tipo no válido (actualizar | anadir)";
+    } else if (c?.tipo === "movimiento") {   // dinero que Javi mete o retira (12-oct-2026)
+      const mv = c.movimiento || {};
+      fallo = !mv.id ? "el movimiento necesita id"
+        : !["ingreso", "retirada"].includes(mv.tipo) ? "tipo de movimiento: ingreso | retirada"
+        : !(Number(mv.importe) > 0) ? "importe no válido"
+        : !/^\d{4}-\d{2}-\d{2}$/.test(mv.fecha || "") ? "fecha AAAA-MM-DD" : null;
+    } else fallo = "tipo no válido (actualizar | anadir | movimiento)";
     if (fallo) return responder({ error: fallo, cambio: c }, 422);
     nuevos.push({ ...c, cid: crypto.randomUUID(), creado: new Date().toISOString() });
   }

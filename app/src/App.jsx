@@ -11,6 +11,7 @@ import { PestanaGrafica, PestanaHistorial } from "./pantallas/Graficas.jsx";
 import { Detalle, NuevaApuesta } from "./pantallas/Formularios.jsx";
 import { ListaTemporadas, EmpezarTemporada } from "./pantallas/Temporadas.jsx";
 import Ajustes from "./pantallas/Ajustes.jsx";
+import Dinero from "./pantallas/Dinero.jsx";
 
 export const VERSION = "2.0 · oct-2026";
 const PESTANAS = [
@@ -139,8 +140,8 @@ export default function App() {
   const temporada = temporadas?.lista.find((t) => t.id === verId) || activa;
   const archivo = !!temporada && temporada.id !== temporadas?.activa;
   const crudas = (temporada && datos.apuestas[temporada.id]) || [];
-  const bets = useMemo(() => (temporada ? conBankroll(crudas, temporada.bankrollInicial) : []), [crudas, temporada]);
-  const r = useMemo(() => (temporada ? resumen(crudas, temporada.bankrollInicial) : null), [crudas, temporada]);
+  const bets = useMemo(() => (temporada ? conBankroll(crudas, temporada.bankrollInicial, temporada.movimientos) : []), [crudas, temporada]);
+  const r = useMemo(() => (temporada ? resumen(crudas, temporada.bankrollInicial, temporada.movimientos) : null), [crudas, temporada]);
 
   function ponerApuestas(id, lista) {
     const limpias = lista.map(limpiar);
@@ -168,6 +169,12 @@ export default function App() {
     setTab("inicio");
     setVista(null);
   }
+
+  // Dinero que Javi mete o retira de la cuenta (12-oct-2026; ver calculos.dinero)
+  const ponerMovimientos = (tid, f) =>
+    ponerTemporadas({ ...temporadas, lista: temporadas.lista.map((x) => (x.id === tid ? { ...x, movimientos: f(x.movimientos || []) } : x)) });
+  const guardarMovimiento = (m) => ponerMovimientos(temporada.id, (l) => [...l, m]);
+  const borrarMovimiento = (id) => ponerMovimientos(temporada.id, (l) => l.filter((m) => m.id !== id));
 
   function renombrar(nombre, stake) {
     ponerTemporadas({ ...temporadas, lista: temporadas.lista.map((x) => (x.id === temporadas.activa ? { ...x, nombre, stake } : x)) });
@@ -328,7 +335,7 @@ export default function App() {
           <div className="tira" style={{ width: `${PESTANAS.length * 100}%`, transform: `translateX(-${idx * (100 / PESTANAS.length)}%)` }}>
             {PESTANAS.map((p) => (
               <div key={p.id} className="panel" style={{ width: `${100 / PESTANAS.length}%` }}>
-                {p.id === "inicio" && <Inicio temporada={temporada} bets={bets} r={r} archivo={archivo} onBet={(b) => setVista({ tipo: "detalle", id: b.id })} onLiquidar={liquidar} />}
+                {p.id === "inicio" && <Inicio temporada={temporada} bets={bets} r={r} archivo={archivo} onBet={(b) => setVista({ tipo: "detalle", id: b.id })} onLiquidar={liquidar} onDinero={() => setVista({ tipo: "dinero" })} />}
                 {p.id === "grafica" && <PestanaGrafica temporada={temporada} bets={bets} r={r} onBet={(b) => setVista({ tipo: "detalle", id: b.id })} />}
                 {p.id === "historial" && <PestanaHistorial bets={bets} onBet={(b) => setVista({ tipo: "detalle", id: b.id })} />}
               </div>
@@ -350,6 +357,7 @@ export default function App() {
       {detalle && <Detalle key={detalle.id} bet={detalle} onVolver={() => setVista(null)} onGuardar={cambiarApuesta} onBorrar={borrarApuesta} />}
       {vista?.tipo === "nueva" && <NuevaApuesta temporada={activa} onVolver={() => setVista(null)} onGuardar={(b) => ponerApuestas(activa.id, [...(datos.apuestas[activa.id] || []), b])} />}
       {vista?.tipo === "ajustes" && ajustes}
+      {vista?.tipo === "dinero" && <Dinero temporada={temporada} r={r} onVolver={() => setVista(null)} onGuardar={guardarMovimiento} onBorrar={borrarMovimiento} />}
       {vista?.tipo === "temporadas" && (
         <ListaTemporadas temporadas={temporadas} apuestas={datos.apuestas} viendo={temporada.id} onVolver={() => setVista(null)}
           onVer={(id) => { setVerId(id); setTab("inicio"); setVista(null); }} onCerrar={() => setVista({ tipo: "empezar" })} onExcel={bajarExcel} />

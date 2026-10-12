@@ -24,15 +24,33 @@ const negativa = (b) => b.result === "loss" || (b.result === "cashout" && b.pl !
 // Orden de la temporada: por fecha y, el mismo día, por orden de alta (sort estable)
 export const ordenar = (bets) => [...bets].sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
 
-// Cada apuesta liquidada con el bankroll que deja detrás
-export function conBankroll(bets, inicial) {
-  let bank = inicial;
+// Dinero de Javi que entra o sale de la cuenta durante la temporada (12-oct-2026, Javi: «la primera apuesta se
+// pierde y tengo que poner otros 15… quiero ver lo que ha salido de mi bolsillo y lo que voy retirando»).
+// temporada.movimientos = [{ id, fecha, tipo: "ingreso" | "retirada", importe, nota }]. El bankroll inicial es el
+// primer dinero que puso; los ingresos se suman a lo puesto y las retiradas a lo retirado. NO son ni ganancia ni pérdida.
+export function dinero(inicial, movimientos = []) {
+  const suma = (tipo) => redondear((movimientos || []).filter((m) => m.tipo === tipo).reduce((a, m) => a + (Number(m.importe) || 0), 0));
+  const ingresos = suma("ingreso"), retirado = suma("retirada");
+  return { ingresos, retirado, puesto: redondear((inicial || 0) + ingresos) };
+}
+
+// Cada apuesta liquidada con el bankroll que deja detrás: «bankroll» = lo que hay en la cuenta (con lo que metió o
+// retiró Javi hasta esa fecha; el mismo día, el dinero va antes que las apuestas) y «rinde» = bankroll inicial + neto
+// acumulado, sin ingresos ni retiradas (para el máximo y los drawdowns: retirar no es perder).
+export function conBankroll(bets, inicial, movimientos = []) {
+  const movs = [...(movimientos || [])].sort((a, b) => (a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : 0));
+  let bank = inicial, rinde = inicial, i = 0;
+  const hasta = (fecha) => {
+    for (; i < movs.length && movs[i].fecha <= fecha; i++) bank = redondear(bank + (movs[i].tipo === "retirada" ? -1 : 1) * (Number(movs[i].importe) || 0));
+  };
   return ordenar(bets).map((b) => {
+    hasta(b.date);
     if (liquidada(b) && b.pl != null) {
       bank = redondear(bank + b.pl);
-      return { ...b, bankroll: bank };
+      rinde = redondear(rinde + b.pl);
+      return { ...b, bankroll: bank, rinde };
     }
-    return { ...b, bankroll: null };
+    return { ...b, bankroll: null, rinde: null };
   });
 }
 
@@ -50,13 +68,15 @@ export function racha(bets) {
 
 // Todo lo que enseña el inicio (nombres elegidos por Javi el 05-oct-2026):
 //   yield = beneficio ÷ total apostado (lo bien que apuesta; el «ROI» de las casas y los tipsters)
-//   ROI   = beneficio ÷ bankroll inicial (lo que ha rendido el dinero que puso)
-export function resumen(bets, inicial) {
+//   ROI   = beneficio ÷ lo que ha salido de su bolsillo (bankroll inicial + lo que fue metiendo; 12-oct-2026)
+//   bankroll = lo que hay en la cuenta: puesto − retirado + neto (cuadra con el saldo de bet365)
+export function resumen(bets, inicial, movimientos = []) {
   const hechas = bets.filter(liquidada);
   const enJuego = bets.filter((b) => b.result === "pending");
   const neto = redondear(hechas.reduce((a, b) => a + (b.pl || 0), 0));
   const apostado = hechas.reduce((a, b) => a + (b.stake || 0), 0);
-  const bankroll = redondear(inicial + neto);
+  const { puesto, retirado, ingresos } = dinero(inicial, movimientos);
+  const bankroll = redondear(puesto - retirado + neto);
   const comprometido = redondear(enJuego.reduce((a, b) => a + (b.stake || 0), 0));
   const cuotas = hechas.map((b) => b.odds).filter((o) => o > 0);
   return {
@@ -74,7 +94,10 @@ export function resumen(bets, inicial) {
     yieldPct: apostado > 0 ? (neto / apostado) * 100 : null,
     bankroll,
     disponible: redondear(bankroll - comprometido),
-    roiInicial: inicial > 0 ? ((bankroll - inicial) / inicial) * 100 : null,
+    puesto,
+    ingresos,
+    retirado,
+    roiInicial: puesto > 0 ? (neto / puesto) * 100 : null,   // el nombre se queda; ahora es sobre lo puesto de su bolsillo
     cuotaMedia: cuotas.length ? cuotas.reduce((a, b) => a + b, 0) / cuotas.length : null,
     racha: racha(bets),
   };

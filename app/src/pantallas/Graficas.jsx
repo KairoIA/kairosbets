@@ -10,8 +10,10 @@ export function PestanaGrafica({ temporada, bets, r, onBet }) {
   // Máximo del bankroll en la temporada (contando con lo que había al empezar) y el máximo drawdown
   const serie = [{ id: "inicio", date: temporada.inicio, bankroll: temporada.bankrollInicial }, ...hechas.filter((b) => b.bankroll != null)];
   const maximo = serie.reduce((m, p) => (p.bankroll > m.bankroll ? p : m), serie[0]);
-  const dd = maxDrawdown(serie);
-  const ahora = drawdownActual(serie);
+  // Drawdowns solo con resultados (12-oct-2026): retirar dinero no es perder ni meterlo es ganar
+  const rinde = serie.map((p) => (p.id === "inicio" ? p : { ...p, bankroll: p.rinde }));
+  const dd = maxDrawdown(rinde);
+  const ahora = drawdownActual(rinde);
   const cuando = (p) => (p.id === "inicio" ? "al empezar" : fechaCorta(p.date));
   return (
     <div className="scroll">

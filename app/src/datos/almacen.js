@@ -105,6 +105,7 @@ export function aplicarCambios(cambios) {
   const lista = (tid) => (listas[tid] ??= (leerJSON(APUESTAS(tid), []) || []).map(limpiar));
   const donde = (id) => temporadas.lista.map((t) => t.id).find((tid) => lista(tid).some((b) => b.id === id));
   const hechos = [], avisos = [], deshacer = [];
+  let temporadasTocadas = false;
   for (const c of cambios) {
     if (c.tipo === "actualizar") {
       const tid = donde(c.id);
@@ -123,14 +124,30 @@ export function aplicarCambios(cambios) {
       deshacer.push({ tipo: "quitar", tid: temporadas.activa, id: b.id });
       avisos.push(`Nueva: ${b.desc} · cuota ${b.odds} · ${b.stake} €${c.motivo ? ` (${c.motivo})` : ""}`);
       hechos.push({ cid: c.cid, resultado: "aplicado" });
+    } else if (c.tipo === "movimiento" && c.movimiento?.id) {   // dinero que mete o retira Javi (12-oct-2026)
+      const t = temporadas.lista.find((x) => x.id === temporadas.activa);
+      const m = { ...c.movimiento, importe: Number(c.movimiento.importe) };
+      if (!t) { hechos.push({ cid: c.cid, resultado: "sin temporada activa" }); continue; }
+      if ((t.movimientos || []).some((x) => x.id === m.id)) { hechos.push({ cid: c.cid, resultado: "ya estaba" }); continue; }
+      t.movimientos = [...(t.movimientos || []), m];
+      temporadasTocadas = true;
+      deshacer.push({ tipo: "quitar_mov", tid: t.id, id: m.id });
+      avisos.push(`${m.tipo === "retirada" ? "Retiras" : "Metes"} ${m.importe.toFixed(2).replace(".", ",")} € el ${m.fecha.slice(8)}/${m.fecha.slice(5, 7)}${m.nota ? ` (${m.nota})` : ""}`);
+      hechos.push({ cid: c.cid, resultado: "aplicado" });
     } else hechos.push({ cid: c.cid, resultado: "no entendido" });
   }
   for (const tid of tocadas) guardarApuestas(tid, listas[tid]);
+  if (temporadasTocadas) guardarTemporadas(temporadas);
   return { datos: cargar(), hechos, avisos, deshacer };
 }
 
 export function deshacerCambios(deshacer) {
   for (const d of [...deshacer].reverse()) {
+    if (d.tipo === "quitar_mov") {
+      const t = leerJSON(TEMPORADAS);
+      guardarTemporadas({ ...t, lista: t.lista.map((x) => (x.id === d.tid ? { ...x, movimientos: (x.movimientos || []).filter((m) => m.id !== d.id) } : x)) });
+      continue;
+    }
     const l = (leerJSON(APUESTAS(d.tid), []) || []).map(limpiar);
     if (d.tipo === "quitar") guardarApuestas(d.tid, l.filter((b) => b.id !== d.id));
     else guardarApuestas(d.tid, l.map((b) => (b.id === d.id ? limpiar({ ...b, ...d.campos }) : b)));

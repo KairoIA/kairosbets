@@ -2,7 +2,7 @@ import { Grafica, Linea, masmenos } from "../piezas/comunes.jsx";
 import { euros, pct, fechaCorta, redondear } from "../datos/util.js";
 
 // El marcador: la cifra del bankroll manda y todo lo demás es tablero
-export default function Inicio({ temporada, bets, r, onBet, onLiquidar, archivo }) {
+export default function Inicio({ temporada, bets, r, onBet, onLiquidar, onDinero, archivo }) {
   const enJuego = bets.filter((b) => b.result === "pending");
   const ultimas = [...bets].reverse().filter((b) => b.result !== "pending").slice(0, 8);
   const posible = redondear(enJuego.reduce((a, b) => a + b.stake * b.odds - b.stake, 0));
@@ -20,10 +20,11 @@ export default function Inicio({ temporada, bets, r, onBet, onLiquidar, archivo 
           <div><span className="etiqueta">Yield</span><b className={r.yieldPct > 0 ? "pos" : r.yieldPct < 0 ? "neg" : ""}>{r.yieldPct == null ? "—" : pct(r.yieldPct, 1)}</b></div>
           <div><span className="etiqueta">Win rate</span><b>{r.winRate == null ? "—" : r.winRate.toFixed(0) + "%"}</b></div>
         </div>
-        <div className="nota-heroe">
-          Empezó con {euros(temporada.bankrollInicial)}
-          {r.roiInicial != null && r.liquidadas > 0 && <> · ROI {pct(r.roiInicial)}</>} · stake {temporada.stake} €
-        </div>
+        {/* 12-oct-2026: lo que ha salido de su bolsillo (no solo el bankroll inicial) y lo retirado; toca → «Tu dinero» */}
+        <button className="nota-heroe" style={{ display: "block", textAlign: "left", width: "100%" }} onClick={onDinero}>
+          De tu bolsillo {euros(r.puesto)}{r.retirado > 0 && <> · retirado {euros(r.retirado)}</>}
+          {r.roiInicial != null && r.liquidadas > 0 && <> · ROI {pct(r.roiInicial)}</>} · stake {temporada.stake} € <span className="ambar">›</span>
+        </button>
       </div>
 
       {/* Apostado = lo jugado en las liquidadas (así yield = neto ÷ apostado); lo que sigue en juego va aparte */}

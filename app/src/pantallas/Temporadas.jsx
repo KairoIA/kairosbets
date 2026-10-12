@@ -11,7 +11,7 @@ export function ListaTemporadas({ temporadas, apuestas, viendo, onVer, onVolver,
       <div className="titulo">Temporadas</div>
       <div className="explica">La actual y las archivadas. Toca una para ver su resumen, su gráfica y su historial.</div>
       {lista.map((t) => {
-        const r = resumen(apuestas[t.id] || [], t.bankrollInicial);
+        const r = resumen(apuestas[t.id] || [], t.bankrollInicial, t.movimientos);
         const actual = t.id === temporadas.activa;
         return (
           <button key={t.id} className={`temporada ${actual ? "actual" : ""}`} onClick={() => onVer(t.id)}>
@@ -23,7 +23,8 @@ export function ListaTemporadas({ temporadas, apuestas, viendo, onVer, onVolver,
               {fechaCorta(t.inicio)} → {t.fin ? fechaCorta(t.fin) : "hoy"} · {r.total} apuestas{viendo === t.id ? " · la estás viendo" : ""}
             </div>
             <div className="cifras">
-              <Insignia>{euros(t.bankrollInicial)} → {euros(r.bankroll)}</Insignia>
+              <Insignia>{euros(r.puesto)} → {euros(r.bankroll)}</Insignia>
+              {r.retirado > 0 && <Insignia>Retirado {euros(r.retirado)}</Insignia>}
               <Insignia c={r.neto >= 0 ? "win" : "loss"}>{signo(r.neto)}</Insignia>
               <Insignia c={r.yieldPct >= 0 ? "pending" : "loss"}>Yield {pct(r.yieldPct, 1)}</Insignia>
               {r.roiInicial != null && r.liquidadas > 0 && <Insignia>ROI {pct(r.roiInicial)}</Insignia>}
@@ -42,7 +43,7 @@ export function ListaTemporadas({ temporadas, apuestas, viendo, onVer, onVolver,
 
 // Formulario para empezar temporada: al cerrar la actual o la primera vez que se abre la app
 export function EmpezarTemporada({ actual, apuestasActual, siguienteNombre, onVolver, onEmpezar, primera }) {
-  const r = actual ? resumen(apuestasActual || [], actual.bankrollInicial) : null;
+  const r = actual ? resumen(apuestasActual || [], actual.bankrollInicial, actual.movimientos) : null;
   const [nombre, setNombre] = useState(siguienteNombre);
   const [bank, setBank] = useState(r ? String(Math.max(0, r.bankroll).toFixed(2)) : "15");
   const [stake, setStake] = useState(String(actual?.stake || 15));
