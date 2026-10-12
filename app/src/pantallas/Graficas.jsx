@@ -10,10 +10,15 @@ export function PestanaGrafica({ temporada, bets, r, onBet }) {
   // Máximo del bankroll en la temporada (contando con lo que había al empezar) y el máximo drawdown
   const serie = [{ id: "inicio", date: temporada.inicio, bankroll: temporada.bankrollInicial }, ...hechas.filter((b) => b.bankroll != null)];
   const maximo = serie.reduce((m, p) => (p.bankroll > m.bankroll ? p : m), serie[0]);
-  // Drawdowns solo con resultados (12-oct-2026): retirar dinero no es perder ni meterlo es ganar
-  const rinde = serie.map((p) => (p.id === "inicio" ? p : { ...p, bankroll: p.rinde }));
-  const dd = maxDrawdown(rinde);
-  const ahora = drawdownActual(rinde);
+  // Drawdowns solo con resultados (12-oct-2026): retirar dinero no es perder ni meterlo es ganar.
+  // El % es la parte del bankroll que se perdió en el bache: caída ÷ (bankroll real en el fondo + caída). Antes iba
+  // sobre el pico de resultados y, al perderse enteros los 15 € iniciales, se quedaba en −100 % para siempre (Javi,
+  // 12-oct: «si llego a 200 y bajo a 100, eso es un 50 %»).
+  const rinde = serie.map((p) => (p.id === "inicio" ? { ...p, real: p.bankroll } : { ...p, bankroll: p.rinde, real: p.bankroll }));
+  const sobreBankroll = (d, fondo) => ({ ...d, pct: d.euros > 0 && fondo && fondo.real + d.euros > 0 ? (d.euros / (fondo.real + d.euros)) * 100 : 0 });
+  const dd0 = maxDrawdown(rinde);
+  const dd = sobreBankroll(dd0, dd0.fondo);
+  const ahora = sobreBankroll(drawdownActual(rinde), rinde[rinde.length - 1]);
   const cuando = (p) => (p.id === "inicio" ? "al empezar" : fechaCorta(p.date));
   return (
     <div className="scroll">
