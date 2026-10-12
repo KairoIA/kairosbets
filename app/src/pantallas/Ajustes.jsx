@@ -1,4 +1,14 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { estadoNube, alCambiarNube, haceCuanto } from "../datos/nube.js";
+
+// Línea de estado de la copia en la nube (12-oct-2026)
+function textoNube(e) {
+  if (e.error === "sin emparejar") return { mal: true, txt: "Nube: este móvil no está emparejado. Pídele a Claude que abra el emparejamiento y vuelve a abrir la app." };
+  if (e.error && e.ultima) return { mal: true, txt: `Nube: ${e.error}; se reintenta sola. Última copia ${haceCuanto(e.ultima)}.` };
+  if (e.error) return { mal: true, txt: `Nube: ${e.error}; se reintenta sola.` };
+  if (e.ultima) return { txt: `Nube: copia guardada ${haceCuanto(e.ultima)}.` };
+  return { txt: "Nube: todavía sin copia (se hace sola al cambiar algo)." };
+}
 
 // Todo se guarda en el móvil (Javi, 05-oct-2026: «paso de excels»). Desde aquí sale a Excel cuando quiera.
 export default function Ajustes({ temporada, onVolver, onExcel, onExportar, onImportar, onTraer, onRenombrar, onTemporadas }) {
@@ -7,6 +17,9 @@ export default function Ajustes({ temporada, onVolver, onExcel, onExportar, onIm
   const [msg, setMsg] = useState(null);
   const archivo = useRef(null);
   const compartir = typeof navigator !== "undefined" && !!navigator.canShare;
+  const [nube, setNube] = useState(estadoNube);
+  useEffect(() => alCambiarNube(setNube), []);
+  const lineaNube = textoNube(nube);
 
   const alImportar = async (ev) => {
     const f = ev.target.files?.[0];
@@ -50,9 +63,10 @@ export default function Ajustes({ temporada, onVolver, onExcel, onExportar, onIm
 
       <div className="caja">
         <b className="caja-titulo">Copia de seguridad</b>
-        <div className="explica" style={{ marginBottom: 12 }}>
-          Tus apuestas viven solo en este móvil. Esta copia sirve para pasarlas a otro móvil o recuperarlas si se borran los datos de la app. Guárdala en Drive o mándatela por Telegram de vez en cuando. «Cargar copia» también acepta los paquetes de apuestas que prepara Claude: los añade a la temporada activa sin borrar nada.
+        <div className="explica" style={{ marginBottom: 10 }}>
+          Cada vez que cambias algo, la app guarda sola una copia en la nube (tu Cloudflare): Claude la ve desde el servidor y, si pierdes el móvil, la recuperas con un toque. Además puedes guardar una copia en un archivo. «Cargar copia» también acepta los paquetes de apuestas que prepara Claude: los añade a la temporada activa sin borrar nada.
         </div>
+        <div className={lineaNube.mal ? "error" : "ok-msg"} style={{ marginBottom: 12 }}>{lineaNube.txt}</div>
         {msg?.error && <div className="error">{msg.error}</div>}
         {msg?.ok && <div className="ok-msg">{msg.ok}</div>}
         <div className="dos">

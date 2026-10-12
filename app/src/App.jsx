@@ -3,6 +3,7 @@ import { cargar, guardarApuestas, guardarTemporadas, siguienteId, exportar, impo
 import { conBankroll, resumen } from "./datos/calculos.js";
 import { libroExcel } from "./datos/excel.js";
 import { traerDeAnterior, guardarTraspaso } from "./datos/traspaso.js";
+import { subirCopia, traerDeNube } from "./datos/nube.js";
 import { hoy } from "./datos/util.js";
 import { LOGO } from "./piezas/comunes.jsx";
 import Inicio from "./pantallas/Inicio.jsx";
@@ -39,6 +40,25 @@ function Traer({ onTraer }) {
   );
 }
 
+// Móvil nuevo (12-oct-2026): trae la última copia de la nube
+function Recuperar({ onRecuperar }) {
+  const [estado, setEstado] = useState(null);
+  const pulsar = async () => {
+    setEstado({ cargando: true });
+    try {
+      await onRecuperar();
+    } catch (e) {
+      setEstado({ error: e.message });
+    }
+  };
+  return (
+    <>
+      {estado?.error && <div className="error">{estado.error}</div>}
+      <button className="boton" disabled={estado?.cargando} onClick={pulsar}>{estado?.cargando ? "Trayendo tu copia…" : "Recuperar mi copia de la nube"}</button>
+    </>
+  );
+}
+
 export default function App() {
   const [datos, setDatos] = useState(() => cargar());
   const [verId, setVerId] = useState(() => datos.temporadas?.activa || null);
@@ -67,6 +87,23 @@ export default function App() {
     }
     setConfirmarPaquete(null);
   }
+  // Copia automática en la nube (12-oct-2026, ver datos/nube.js): 1,5 s después del último cambio, al abrir la app
+  // y al salir de ella (por si se cerró justo después de liquidar algo). Si nada cambió desde la última subida, no sube.
+  const datosRef = useRef(datos);
+  datosRef.current = datos;
+  useEffect(() => {
+    const t = setTimeout(() => subirCopia(datos.temporadas, datos.apuestas), 1500);
+    return () => clearTimeout(t);
+  }, [datos]);
+  useEffect(() => {
+    const alCambiarVista = () => {
+      const d = datosRef.current;
+      subirCopia(d.temporadas, d.apuestas, { alSalir: document.visibilityState === "hidden" });
+    };
+    document.addEventListener("visibilitychange", alCambiarVista);
+    return () => document.removeEventListener("visibilitychange", alCambiarVista);
+  }, []);
+
   const temporadas = datos.temporadas;
   const activa = temporadas?.lista.find((t) => t.id === temporadas.activa);
   const temporada = temporadas?.lista.find((t) => t.id === verId) || activa;
@@ -128,6 +165,12 @@ export default function App() {
     const n = guardarTraspaso(await traerDeAnterior());
     setTimeout(() => location.reload(), 300);
     return n;
+  }
+
+  async function recuperarNube() {
+    const d = importar(await traerDeNube());
+    setDatos(d);
+    setVerId(d.temporadas.activa);
   }
 
   async function cargarCopia(texto) {
@@ -197,7 +240,9 @@ export default function App() {
           <div className="scroll">
             <div className="pad" style={{ paddingBottom: 4 }}>
               <div className="titulo">KairosBets, casa nueva</div>
-              <div className="explica">¿Ya usabas KairosBets? Trae tus temporadas y apuestas de la dirección anterior con un toque. Hazlo desde Chrome, antes de instalar la app.</div>
+              <div className="explica">¿Ya usabas KairosBets? Recupera tus temporadas y apuestas de la nube con un toque.</div>
+              <Recuperar onRecuperar={recuperarNube} />
+              <div className="explica" style={{ marginTop: 14 }}>O tráelas de la dirección anterior (desde Chrome, antes de instalar la app):</div>
               <Traer onTraer={traer} />
               <button className="enlace" style={{ marginTop: 12 }} onClick={() => setVista({ tipo: "ajustes" })}>O carga una copia de seguridad</button>
             </div>

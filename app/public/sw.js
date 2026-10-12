@@ -2,9 +2,9 @@
 // - La página: primero la red y, sin red, la copia guardada → las versiones nuevas llegan solas.
 // - manifest.json también por red primero (así Chrome siempre ve el bueno al instalar).
 // - assets/ (nombres con huella) e iconos: primero la copia guardada.
-// - Lo de fuera (Google, DeepSeek) no se toca.
+// - Lo de fuera (Google, DeepSeek) no se toca, ni /api/ (la copia en la nube, 12-oct-2026: siempre a la red).
 // La caché lleva el nombre de su carpeta («kb-/-N»), por si algún día conviven dos copias en un mismo sitio.
-const VERSION = 10;
+const VERSION = 11;
 const PREFIJO = "kb-" + new URL(self.registration.scope).pathname + "-";
 const CACHE = PREFIJO + VERSION;
 
@@ -37,6 +37,7 @@ self.addEventListener("fetch", (e) => {
   if (req.method !== "GET") return;
   const url = new URL(req.url);
   if (url.origin !== location.origin || !url.pathname.startsWith(new URL(self.registration.scope).pathname)) return;
+  if (url.pathname.startsWith("/api/")) return;
   if (req.mode === "navigate") return redPrimero(e, "./");
   if (url.pathname.endsWith("/manifest.json")) return redPrimero(e, "./manifest.json");
   e.respondWith(
