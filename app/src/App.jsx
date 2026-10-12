@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { cargar, guardarApuestas, guardarTemporadas, siguienteId, exportar, importar, limpiar, leerPaqueteDeURL, fusionarPaquete } from "./datos/almacen.js";
+import { cargar, guardarApuestas, guardarTemporadas, siguienteId, exportar, importar, limpiar, leerPaqueteDeURL, fusionarPaquete, deshacerCambios } from "./datos/almacen.js";
 import { conBankroll, resumen } from "./datos/calculos.js";
 import { libroExcel } from "./datos/excel.js";
 import { traerDeAnterior, guardarTraspaso } from "./datos/traspaso.js";
-import { subirCopia, traerDeNube } from "./datos/nube.js";
+import { subirCopia, traerDeNube, recogerCambios } from "./datos/nube.js";
 import { hoy } from "./datos/util.js";
 import { LOGO } from "./piezas/comunes.jsx";
 import Inicio from "./pantallas/Inicio.jsx";
@@ -103,6 +103,36 @@ export default function App() {
     document.addEventListener("visibilitychange", alCambiarVista);
     return () => document.removeEventListener("visibilitychange", alCambiarVista);
   }, []);
+
+  // Cambios que deja Claude en la nube (12-oct-2026): se recogen al abrir, al volver a la app y cada minuto con
+  // ella abierta; nunca con un formulario abierto (al guardarlo pisaría el cambio). Avisa de qué cambió, con «Deshacer».
+  const [avisoClaude, setAvisoClaude] = useState(null);
+  const vistaRef = useRef(null);
+  vistaRef.current = vista;
+  const revisando = useRef(false);
+  useEffect(() => {
+    const revisar = async () => {
+      if (revisando.current || document.visibilityState !== "visible" || ["detalle", "nueva", "empezar"].includes(vistaRef.current?.tipo)) return;
+      revisando.current = true;
+      try {
+        const r = await recogerCambios();
+        if (!r) return;
+        setDatos(r.datos);
+        if (r.avisos.length) setAvisoClaude((a) => ({ avisos: [...(a?.avisos || []), ...r.avisos], deshacer: [...(a?.deshacer || []), ...r.deshacer] }));
+      } finally {
+        revisando.current = false;
+      }
+    };
+    const t = setTimeout(revisar, 800);
+    const reloj = setInterval(revisar, 60000);
+    const alVolver = () => document.visibilityState === "visible" && revisar();
+    document.addEventListener("visibilitychange", alVolver);
+    return () => { clearTimeout(t); clearInterval(reloj); document.removeEventListener("visibilitychange", alVolver); };
+  }, []);
+  function deshacerClaude() {
+    setDatos(deshacerCambios(avisoClaude.deshacer));
+    setAvisoClaude(null);
+  }
 
   const temporadas = datos.temporadas;
   const activa = temporadas?.lista.find((t) => t.id === temporadas.activa);
@@ -280,6 +310,16 @@ export default function App() {
         <div className={avisoPaquete.error ? "error" : "ok-msg"} style={{ margin: "10px 14px 0" }}>
           {avisoPaquete.error || avisoPaquete.ok}
           <button className="enlace" style={{ marginLeft: 10 }} onClick={() => setAvisoPaquete(null)}>Vale</button>
+        </div>
+      )}
+      {avisoClaude && !vista && (
+        <div className="ok-msg" style={{ margin: "10px 14px 0" }}>
+          <b>Claude ha cambiado:</b>
+          {avisoClaude.avisos.map((t, i) => <div key={i} style={{ marginTop: 4 }}>· {t}</div>)}
+          <div className="fila" style={{ gap: 14, marginTop: 8 }}>
+            <button className="enlace" onClick={() => setAvisoClaude(null)}>Vale</button>
+            <button className="enlace" onClick={deshacerClaude}>Deshacer</button>
+          </div>
         </div>
       )}
 

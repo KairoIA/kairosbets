@@ -1,5 +1,5 @@
 import { leerJSON, guardarJSON } from "./util.js";
-import { exportar } from "./almacen.js";
+import { exportar, aplicarCambios } from "./almacen.js";
 
 // Copia automática en la nube (12-oct-2026, Javi: «mira la app… deberías ser capaz de meterte y verlo»).
 // Cada vez que cambian las temporadas o las apuestas, la app sube una copia completa (la misma de «Guardar copia»)
@@ -98,6 +98,36 @@ export async function traerDeNube() {
   if (!r.ok) throw new Error(`La nube respondió ${r.status}. Prueba en un rato.`);
   ponerEstado({ emparejado: true, error: null });
   return r.text();
+}
+
+// Cambios que deja Claude (12-oct-2026): los recoge, los aplica (almacen.aplicarCambios) y los confirma a la nube.
+// Por si la confirmación se pierde, el móvil recuerda los que ya aplicó y no los repite nunca.
+const APLICADOS = "kairosbets_nube_aplicados";
+
+export async function recogerCambios() {
+  if (!hayNube()) return null;
+  let cambios;
+  try {
+    const r = await conLlave((k) => fetch(API + "/cambios", { headers: { authorization: "Bearer " + k }, cache: "no-store" }));
+    if (!r.ok) return null;
+    cambios = (await r.json()).cambios || [];
+  } catch {
+    return null;
+  }
+  if (!cambios.length) return null;
+  const ya = new Set(leerJSON(APLICADOS, []) || []);
+  const repetidos = cambios.filter((c) => ya.has(c.cid)).map((c) => ({ cid: c.cid, resultado: "ya aplicado" }));
+  const nuevos = cambios.filter((c) => !ya.has(c.cid));
+  const r = nuevos.length ? aplicarCambios(nuevos) : null;
+  if (nuevos.length && !r) return null;   // móvil sin temporadas: se quedan en la bandeja para cuando las tenga
+  if (r) guardarJSON(APLICADOS, [...ya, ...nuevos.map((c) => c.cid)].slice(-300));
+  const hechos = [...repetidos, ...(r?.hechos || [])];
+  conLlave((k) => fetch(API + "/cambios/hechos", {
+    method: "POST",
+    headers: { "content-type": "application/json", authorization: "Bearer " + k },
+    body: JSON.stringify({ hechos }),
+  })).catch(() => {});
+  return r;   // { datos, avisos, deshacer } o null si no había nada nuevo
 }
 
 // «hace 3 min», para Ajustes

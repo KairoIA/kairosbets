@@ -83,6 +83,61 @@ export function fusionarPaquete(d) {
   return r;
 }
 
+// Cambios que deja Claude en la nube (12-oct-2026, Javi: «corrígelo tú»; ver datos/nube.js). Se aplican sobre lo
+// que haya en el móvil, sin tocar nada más:
+//   actualizar → busca la apuesta por id en CUALQUIER temporada (también liquidadas y archivadas) y cambia solo esos campos
+//   anadir     → la añade a la temporada activa, si ese id no está ya en ninguna
+// Devuelve el resultado de cada uno (para confirmarlo a la nube), los avisos para Javi y cómo deshacerlo.
+const NOMBRE_RESULTADO = { pending: "en juego", win: "ganada", loss: "perdida", cashout: "cash out" };
+const fmtPL = (n) => (n == null ? "—" : (n >= 0 ? "+" : "−") + Math.abs(n).toFixed(2).replace(".", ",") + " €");
+const fmtCampo = { pl: ["P&L", fmtPL], result: ["resultado", (v) => NOMBRE_RESULTADO[v] || v], odds: ["cuota", String], stake: ["stake", (v) => v + " €"], desc: ["descripción", String], notes: ["notas", String], date: ["fecha", String], type: ["tipo", String] };
+
+function describir(antes, despues, motivo) {
+  const partes = Object.keys(fmtCampo).filter((k) => JSON.stringify(antes[k]) !== JSON.stringify(despues[k]))
+    .map((k) => `${fmtCampo[k][0]} ${fmtCampo[k][1](antes[k])} → ${fmtCampo[k][1](despues[k])}`);
+  return `${despues.desc || despues.id}: ${partes.join(", ") || "sin cambios"}${motivo ? ` (${motivo})` : ""}`;
+}
+
+export function aplicarCambios(cambios) {
+  const temporadas = leerJSON(TEMPORADAS);
+  if (!temporadas?.lista?.length) return null;
+  const listas = {}, tocadas = new Set();
+  const lista = (tid) => (listas[tid] ??= (leerJSON(APUESTAS(tid), []) || []).map(limpiar));
+  const donde = (id) => temporadas.lista.map((t) => t.id).find((tid) => lista(tid).some((b) => b.id === id));
+  const hechos = [], avisos = [], deshacer = [];
+  for (const c of cambios) {
+    if (c.tipo === "actualizar") {
+      const tid = donde(c.id);
+      if (!tid) { hechos.push({ cid: c.cid, resultado: "no está en el móvil" }); continue; }
+      const l = lista(tid), i = l.findIndex((b) => b.id === c.id), antes = l[i];
+      l[i] = limpiar({ ...antes, ...c.campos });
+      tocadas.add(tid);
+      deshacer.push({ tipo: "actualizar", tid, id: c.id, campos: Object.fromEntries(Object.keys(c.campos).map((k) => [k, antes[k] ?? null])) });
+      avisos.push(describir(antes, l[i], c.motivo));
+      hechos.push({ cid: c.cid, resultado: "aplicado" });
+    } else if (c.tipo === "anadir" && c.apuesta?.id) {
+      if (donde(c.apuesta.id)) { hechos.push({ cid: c.cid, resultado: "ya estaba" }); continue; }
+      const b = limpiar(c.apuesta);
+      lista(temporadas.activa).push(b);
+      tocadas.add(temporadas.activa);
+      deshacer.push({ tipo: "quitar", tid: temporadas.activa, id: b.id });
+      avisos.push(`Nueva: ${b.desc} · cuota ${b.odds} · ${b.stake} €${c.motivo ? ` (${c.motivo})` : ""}`);
+      hechos.push({ cid: c.cid, resultado: "aplicado" });
+    } else hechos.push({ cid: c.cid, resultado: "no entendido" });
+  }
+  for (const tid of tocadas) guardarApuestas(tid, listas[tid]);
+  return { datos: cargar(), hechos, avisos, deshacer };
+}
+
+export function deshacerCambios(deshacer) {
+  for (const d of [...deshacer].reverse()) {
+    const l = (leerJSON(APUESTAS(d.tid), []) || []).map(limpiar);
+    if (d.tipo === "quitar") guardarApuestas(d.tid, l.filter((b) => b.id !== d.id));
+    else guardarApuestas(d.tid, l.map((b) => (b.id === d.id ? limpiar({ ...b, ...d.campos }) : b)));
+  }
+  return cargar();
+}
+
 export function importar(texto) {
   const d = JSON.parse(texto);
   if (d?.app === "KairosBets" && d.tipo === "paquete" && Array.isArray(d.apuestas)) return fusionarPaquete(d);

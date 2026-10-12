@@ -21,6 +21,15 @@
 //   POST /api/copia/abrir        lector  {horas}: abre la ventana de emparejamiento (1-24 h, 12 por defecto)
 //   GET  /api/copia/estado       lector  emparejado, ventana, última copia
 //   GET  /api/copia/dias         lector  días con copia
+//
+// Cambios de Claude (12-oct-2026, Javi: «corrígelo tú, deberías tener poder para modificar las cosas de la app»).
+// Claude deja cambios en una bandeja (KV «cambios») y la app los aplica al abrirse o mientras está abierta, avisa de
+// lo que cambió con «Deshacer» y lo confirma (sale de la bandeja y queda en «cambios_hechos», las 200 últimas).
+//   POST /api/copia/cambios          lector  {cambios: [{tipo:"actualizar", id, campos, motivo} | {tipo:"anadir", apuesta, motivo}]}
+//   GET  /api/copia/cambios          ambos   la bandeja
+//   POST /api/copia/cambios/hechos   móvil   {hechos: [{cid, resultado}]}
+//   POST /api/copia/cambios/anular   lector  {cids}: quita cambios que aún no ha cogido el móvil
+//   GET  /api/copia/cambios/hechos   lector  los últimos aplicados
 
 const CABECERAS = { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" };
 const responder = (cuerpo, estado = 200) => new Response(JSON.stringify(cuerpo), { status: estado, headers: CABECERAS });
@@ -110,6 +119,63 @@ async function dias(env) {
   return responder({ dias: lista });
 }
 
+// ── Cambios de Claude ────────────────────────────────────────────────────────────────────────────────────────
+const CAMPOS = ["date", "type", "desc", "odds", "stake", "result", "pl", "notes"];
+const RESULTADOS = ["pending", "win", "loss", "cashout"];
+const leerLista = async (env, clave) => { try { return JSON.parse((await env.NUBE.get(clave)) || "[]"); } catch { return []; } };
+
+function validarCampos(c) {
+  if (!c || typeof c !== "object") return "faltan los campos";
+  for (const k of Object.keys(c)) if (!CAMPOS.includes(k)) return `campo no permitido: ${k}`;
+  if ("result" in c && !RESULTADOS.includes(c.result)) return `resultado no válido: ${c.result}`;
+  for (const k of ["odds", "stake"]) if (k in c && !(Number(c[k]) > 0)) return `${k} no válido`;
+  if ("pl" in c && c.pl !== null && !Number.isFinite(Number(c.pl))) return "pl no válido";
+  return null;
+}
+
+async function ponerCambios(request, env) {
+  let lista;
+  try { lista = (await request.json())?.cambios; } catch { return responder({ error: "no es JSON" }, 400); }
+  if (!Array.isArray(lista) || !lista.length || lista.length > 50) return responder({ error: "manda entre 1 y 50 cambios" }, 400);
+  const nuevos = [];
+  for (const c of lista) {
+    let fallo = null;
+    if (c?.tipo === "actualizar") fallo = !c.id ? "falta el id" : validarCampos(c.campos);
+    else if (c?.tipo === "anadir") {
+      const { id, ...resto } = c.apuesta || {};
+      fallo = !id ? "la apuesta nueva necesita id" : validarCampos(resto) || (!resto.desc || !(Number(resto.odds) > 0) || !(Number(resto.stake) > 0) ? "a la apuesta nueva le falta desc, odds o stake" : null);
+    } else fallo = "tipo no válido (actualizar | anadir)";
+    if (fallo) return responder({ error: fallo, cambio: c }, 422);
+    nuevos.push({ ...c, cid: crypto.randomUUID(), creado: new Date().toISOString() });
+  }
+  const bandeja = await leerLista(env, "cambios");
+  await env.NUBE.put("cambios", JSON.stringify([...bandeja, ...nuevos]));
+  return responder({ ok: true, cids: nuevos.map((c) => c.cid) });
+}
+
+async function cambiosHechos(request, env) {
+  let hechos;
+  try { hechos = (await request.json())?.hechos; } catch { return responder({ error: "no es JSON" }, 400); }
+  if (!Array.isArray(hechos)) return responder({ error: "faltan los hechos" }, 400);
+  const cids = new Set(hechos.map((h) => h?.cid));
+  const bandeja = await leerLista(env, "cambios");
+  const quedan = bandeja.filter((c) => !cids.has(c.cid));
+  const cuando = new Date().toISOString();
+  const log = [...(await leerLista(env, "cambios_hechos")), ...bandeja.filter((c) => cids.has(c.cid)).map((c) => ({ ...c, aplicado: cuando, resultado: hechos.find((h) => h.cid === c.cid)?.resultado || "" }))];
+  await env.NUBE.put("cambios", JSON.stringify(quedan));
+  await env.NUBE.put("cambios_hechos", JSON.stringify(log.slice(-200)));
+  return responder({ ok: true, quedan: quedan.length });
+}
+
+async function anularCambios(request, env) {
+  let cids;
+  try { cids = new Set((await request.json())?.cids || []); } catch { return responder({ error: "no es JSON" }, 400); }
+  const bandeja = await leerLista(env, "cambios");
+  const quedan = bandeja.filter((c) => !cids.has(c.cid));
+  await env.NUBE.put("cambios", JSON.stringify(quedan));
+  return responder({ ok: true, anulados: bandeja.length - quedan.length, quedan: quedan.length });
+}
+
 export async function onRequest({ request, env, params }) {
   if (!env.NUBE) return responder({ error: "falta el almacén NUBE en el proyecto" }, 500);
   const url = new URL(request.url);
@@ -123,6 +189,18 @@ export async function onRequest({ request, env, params }) {
       if (m === "GET") return rol ? await leerCopia(url, env) : responder({ error: "sin permiso" }, 401);
       return responder({ error: "método no permitido" }, 405);
     }
+    if (ruta === "copia/cambios") {
+      if (m === "GET") return rol ? responder({ cambios: await leerLista(env, "cambios") }) : responder({ error: "sin permiso" }, 401);
+      if (m === "POST") return rol === "lector" ? await ponerCambios(request, env) : responder({ error: "sin permiso" }, 401);
+      return responder({ error: "método no permitido" }, 405);
+    }
+    if (ruta === "copia/cambios/hechos") {
+      if (m === "POST") return rol === "movil" ? await cambiosHechos(request, env) : responder({ error: "sin permiso" }, 401);
+      if (m === "GET") return rol === "lector" ? responder({ hechos: await leerLista(env, "cambios_hechos") }) : responder({ error: "sin permiso" }, 401);
+      return responder({ error: "método no permitido" }, 405);
+    }
+    if (ruta === "copia/cambios/anular" && m === "POST")
+      return rol === "lector" ? await anularCambios(request, env) : responder({ error: "sin permiso" }, 401);
     if (["copia/abrir", "copia/estado", "copia/dias"].includes(ruta)) {
       if (rol !== "lector") return responder({ error: "sin permiso" }, 401);
       if (ruta === "copia/abrir" && m === "POST") return await abrirVentana(request, env);
