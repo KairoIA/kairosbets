@@ -66,6 +66,27 @@ export function racha(bets) {
   return { n, tipo };
 }
 
+// Mejor y peor racha (Javi, 12-oct-2026: «quiero saber la peor racha negativa y la mejor positiva»). Racha = apuestas
+// liquidadas seguidas del mismo signo (un cash out cuenta según deje beneficio o pérdida). Se elige la que más euros
+// movió: { euros, n, desde, hasta } o null si no hay ninguna de ese signo.
+export function rachas(bets) {
+  const l = ordenar(bets).filter((b) => liquidada(b) && b.pl != null && (positiva(b) || negativa(b)));
+  let mejor = null, peor = null, actual = null;
+  const cerrar = () => {
+    if (!actual) return;
+    const r = { euros: redondear(actual.euros), n: actual.n, desde: actual.desde, hasta: actual.hasta };
+    if (actual.signo > 0 && (!mejor || r.euros > mejor.euros)) mejor = r;
+    if (actual.signo < 0 && (!peor || r.euros < peor.euros)) peor = r;
+  };
+  for (const b of l) {
+    const signo = positiva(b) ? 1 : -1;
+    if (actual && actual.signo === signo) { actual.euros += b.pl; actual.n++; actual.hasta = b.date; }
+    else { cerrar(); actual = { signo, euros: b.pl, n: 1, desde: b.date, hasta: b.date }; }
+  }
+  cerrar();
+  return { mejor, peor };
+}
+
 // Todo lo que enseña el inicio (nombres elegidos por Javi el 05-oct-2026):
 //   yield = beneficio ÷ total apostado (lo bien que apuesta; el «ROI» de las casas y los tipsters)
 //   ROI   = beneficio ÷ lo que ha salido de su bolsillo (bankroll inicial + lo que fue metiendo; 12-oct-2026)

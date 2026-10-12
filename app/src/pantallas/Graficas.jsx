@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Grafica, Insignia, Linea, masmenos } from "../piezas/comunes.jsx";
-import { estado, maxDrawdown, drawdownActual } from "../datos/calculos.js";
+import { estado, maxDrawdown, drawdownActual, rachas } from "../datos/calculos.js";
 import { pct, fechaCorta } from "../datos/util.js";
 
 export function PestanaGrafica({ temporada, bets, r, onBet }) {
@@ -20,6 +20,13 @@ export function PestanaGrafica({ temporada, bets, r, onBet }) {
   const dd = sobreBankroll(dd0, dd0.fondo);
   const ahora = sobreBankroll(drawdownActual(rinde), rinde[rinde.length - 1]);
   const cuando = (p) => (p.id === "inicio" ? "al empezar" : fechaCorta(p.date));
+  const { mejor, peor } = rachas(bets);
+  // «2 seguidas · 10 → 11 oct» (el mes una sola vez si es el mismo, para que quepa en una línea)
+  const tramo = (r) => {
+    const d = fechaCorta(r.desde), h = fechaCorta(r.hasta);
+    const fechas = r.desde === r.hasta ? d : r.desde.slice(0, 7) === r.hasta.slice(0, 7) ? `${d.split(" ")[0]} → ${h}` : `${d} → ${h}`;
+    return `${r.n} seguida${r.n === 1 ? "" : "s"} · ${fechas}`;
+  };
   return (
     <div className="scroll">
       <div className="heroe" style={{ paddingTop: 14 }}>
@@ -47,6 +54,17 @@ export function PestanaGrafica({ temporada, bets, r, onBet }) {
             {dd.euros > 0 ? "−" + dd.euros.toFixed(2) : "0.00"}<small> €</small>
             <span style={{ marginLeft: 22 }}>{dd.euros > 0 ? "−" + dd.pct.toFixed(1) : "0.0"}<small> %</small></span>
           </b>
+        </div>
+        {/* Javi (12-oct): la mejor y la peor racha, en €; debajo cuántas seguidas y cuándo */}
+        <div>
+          <span className="etiqueta">Mejor racha</span>
+          <b className={mejor ? "pos" : ""}>{mejor ? "+" + mejor.euros.toFixed(2) : "—"}<small> €</small></b>
+          <span className="etiqueta" style={{ display: "block", marginTop: 5 }}>{mejor ? tramo(mejor) : "sin rachas aún"}</span>
+        </div>
+        <div>
+          <span className="etiqueta">Peor racha</span>
+          <b className={peor ? "neg" : ""}>{peor ? "−" + Math.abs(peor.euros).toFixed(2) : "—"}<small> €</small></b>
+          <span className="etiqueta" style={{ display: "block", marginTop: 5 }}>{peor ? tramo(peor) : "sin rachas aún"}</span>
         </div>
       </div>
       <div className="pad">
