@@ -14,6 +14,12 @@ App: **https://kairosbets.pages.dev** (desde el 06-oct-2026; las direcciones de 
 
 Los datos viven en el móvil (`localStorage`); no hay Hoja de Google (decisión de oct-2026). La app ya no guarda claves de IA (al abrirse borra las que hubiera). **Nunca van claves en el código**, que es público.
 
+## Tu dinero (12-oct-2026)
+Javi: «la primera apuesta se pierde, me deja en −15 y tengo que poner otros 15; quiero ver lo que sale de mi bolsillo, lo que voy retirando y el ROI sobre lo que he puesto». Cada temporada lleva `movimientos` (`{id, fecha, tipo: ingreso|retirada, importe, nota}`, dentro de `kairosbets_temporadas`).
+- **De tu bolsillo** = bankroll inicial + ingresos. **Bankroll** = lo que hay en la cuenta (de tu bolsillo − retirado + neto), así cuadra con el saldo de bet365. **ROI** = neto ÷ de tu bolsillo.
+- Meter o retirar no es ganar ni perder: los drawdowns de la Gráfica van solo con resultados (`rinde`).
+- Se apunta en la pantalla «Tu dinero» (tocar «De tu bolsillo…» en el Inicio) o desde el VDS: `Bets/kairosbets_nube.py dinero meter|retirar <importe> --fecha … --nota …`.
+
 ## Copia en la nube (12-oct-2026)
 Javi: «mira la app… deberías ser capaz de meterte y verlo». Cada vez que cambian las temporadas o las apuestas, la app sube sola una copia completa (la misma de «Guardar copia») a `/api/copia`. Así Claude la lee desde el VDS (cash outs, liquidaciones) y perder el móvil no es perder la temporada.
 - **Servidor:** `functions/api/[[ruta]].js` (Pages Functions, solo atiende `/api/*`). Guarda en el KV `kairosbets_nube` (enlazado como `NUBE` en producción; la vista previa usa `kairosbets_nube_prueba`). Copia actual + la última de cada día (400 días) + respaldo si una copia nueva trae 3 o más apuestas menos. Un móvil vacío nunca pisa la copia buena.
