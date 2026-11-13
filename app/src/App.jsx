@@ -320,13 +320,17 @@ export default function App() {
         </div>
       )}
       {avisoClaude && !vista && (
+        // 13-nov-2026 (Javi: «son tantas que no puedo darle a vale»): botones ARRIBA y como mucho 3 líneas + «y N más»
         <div className="ok-msg" style={{ margin: "10px 14px 0" }}>
-          <b>Claude ha cambiado:</b>
-          {avisoClaude.avisos.map((t, i) => <div key={i} style={{ marginTop: 4 }}>· {t}</div>)}
-          <div className="fila" style={{ gap: 14, marginTop: 8 }}>
-            <button className="enlace" onClick={() => setAvisoClaude(null)}>Vale</button>
-            <button className="enlace" onClick={deshacerClaude}>Deshacer</button>
+          <div className="entre">
+            <b>Claude ha cambiado {avisoClaude.avisos.length === 1 ? "1 cosa" : `${avisoClaude.avisos.length} cosas`}:</b>
+            <div className="fila" style={{ gap: 14 }}>
+              <button className="enlace" onClick={() => setAvisoClaude(null)}>Vale</button>
+              <button className="enlace" onClick={deshacerClaude}>Deshacer</button>
+            </div>
           </div>
+          {avisoClaude.avisos.slice(0, 3).map((t, i) => <div key={i} style={{ marginTop: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>· {t}</div>)}
+          {avisoClaude.avisos.length > 3 && <div style={{ marginTop: 4 }}>· y {avisoClaude.avisos.length - 3} más</div>}
         </div>
       )}
 
