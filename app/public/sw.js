@@ -4,7 +4,7 @@
 // - assets/ (nombres con huella) e iconos: primero la copia guardada.
 // - Lo de fuera (Google, DeepSeek) no se toca, ni /api/ (la copia en la nube, 12-oct-2026: siempre a la red).
 // La caché lleva el nombre de su carpeta («kb-/-N»), por si algún día conviven dos copias en un mismo sitio.
-const VERSION = 13;
+const VERSION = 14;
 const PREFIJO = "kb-" + new URL(self.registration.scope).pathname + "-";
 const CACHE = PREFIJO + VERSION;
 
