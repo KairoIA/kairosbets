@@ -5,6 +5,14 @@ export const LOGO = "icons/icon-192.png";
 
 export const Sep = () => <div className="sep" />;
 
+// La apuesta con una pata por línea (13-nov-2026, Javi: «que ponga la apuesta y la cuota de forma sencilla»).
+// Claude escribe las patas separadas por « · » («Gana Eslovaquia 1.38 · Más 2.5 goles Escocia–Macedonia 1.57»);
+// lo que se apunta a mano sale tal cual.
+export function Patas({ desc, className = "desc", style }) {
+  const trozos = String(desc || "").split(" · ").filter(Boolean);
+  return trozos.map((t, i) => <span key={i} className={className} style={{ display: "block", ...style }}>{t}</span>);
+}
+
 export function Insignia({ children, c, className = "" }) {
   return <span className={`insignia ${c ? "c r-" + c : ""} ${className}`}>{children}</span>;
 }
@@ -21,7 +29,7 @@ export function Linea({ bet, onClick, sel, conBank, conNeto }) {
     <button className={`linea r-${e.clave} ${sel ? "sel" : ""}`} onClick={onClick}>
       <span className="f">{fechaCorta(bet.date)}</span>
       <span className="texto">
-        <span className="desc" style={{ display: "block" }}>{bet.desc}</span>
+        <Patas desc={bet.desc} />
         <span className="sub" style={{ display: "block" }}><i className="marca-res" />{e.texto} · @{Number(bet.odds).toFixed(2)} · {bet.stake} €</span>
       </span>
       <span className="importe">

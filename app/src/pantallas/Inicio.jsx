@@ -1,4 +1,4 @@
-import { Grafica, Linea, masmenos } from "../piezas/comunes.jsx";
+import { Grafica, Linea, Patas, masmenos } from "../piezas/comunes.jsx";
 import { euros, pct, fechaCorta, redondear } from "../datos/util.js";
 
 // El marcador: la cifra del bankroll manda y todo lo demás es tablero
@@ -60,7 +60,7 @@ export default function Inicio({ temporada, bets, r, onBet, onLiquidar, onDinero
             <div key={b.id} className="juego">
               <button className="arriba" onClick={() => onBet(b)}>
                 <div className="desc">
-                  {b.desc}
+                  <Patas desc={b.desc} className="" />
                   <div className="meta">{fechaCorta(b.date)} · {b.type} · {b.stake} €</div>
                 </div>
                 <div className="cuota">{Number(b.odds).toFixed(2)}</div>

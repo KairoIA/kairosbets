@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Grafica, Insignia, Linea, masmenos } from "../piezas/comunes.jsx";
+import { Grafica, Insignia, Linea, Patas, masmenos } from "../piezas/comunes.jsx";
 import { estado, extremos, peorCaida, rachas } from "../datos/calculos.js";
 import { fechaCorta } from "../datos/util.js";
 
@@ -56,7 +56,7 @@ export function PestanaGrafica({ temporada, bets, onBet }) {
               <span className="etiqueta">{fechaCorta(elegida.date)} · {elegida.type}</span>
               <Insignia c={estado(elegida).clave}>{estado(elegida).texto}</Insignia>
             </div>
-            <div className="desc" style={{ fontSize: 11.5, lineHeight: 1.45, marginBottom: 8 }}>{elegida.desc}</div>
+            <div className="desc" style={{ fontSize: 11.5, lineHeight: 1.45, marginBottom: 8 }}><Patas desc={elegida.desc} className="" /></div>
             <div className="entre">
               <span className="etiqueta">@{Number(elegida.odds).toFixed(2)} · {elegida.stake} € · acumulado {masmenos(elegida.neto) || "0.00"}</span>
               <b className="rotulo" style={{ fontSize: 22, color: "var(--c)" }}>{masmenos(elegida.pl)}</b>

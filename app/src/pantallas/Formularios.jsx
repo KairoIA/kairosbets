@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { estado, beneficio } from "../datos/calculos.js";
 import { hoy, fechaCorta, signo, nuevoId } from "../datos/util.js";
-import { Insignia } from "../piezas/comunes.jsx";
+import { Insignia, Patas } from "../piezas/comunes.jsx";
 
 const RESULTADOS = ["pending", "win", "loss", "cashout"];
 
@@ -89,7 +89,7 @@ export function Detalle({ bet, onVolver, onGuardar, onBorrar }) {
             <span className="etiqueta">{fechaCorta(bet.date)} · {bet.type}</span>
             <Insignia c={e.clave}>{e.texto}</Insignia>
           </div>
-          <div className="copiable" style={{ fontSize: 12.5, lineHeight: 1.5, marginBottom: 10 }}>{bet.desc}</div>
+          <div className="copiable" style={{ fontSize: 12.5, lineHeight: 1.5, marginBottom: 10 }}><Patas desc={bet.desc} className="" /></div>
           <div className="entre">
             <div className="fila"><Insignia>@{bet.odds}</Insignia><Insignia>{bet.stake} € stake</Insignia></div>
             <button className="enlace" onClick={() => setEditar(true)}>Corregir datos</button>
