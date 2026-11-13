@@ -24,7 +24,7 @@ export default function Inicio({ temporada, bets, r, onBet, onLiquidar, onDinero
         </div>
         {/* Lo que ha salido de su bolsillo (con las recargas automáticas) y lo retirado; toca → «Tu dinero» */}
         <button className="nota-heroe" style={{ display: "block", textAlign: "left", width: "100%" }} onClick={() => onDinero()}>
-          Has puesto {euros(r.puesto)}{r.retirado > 0 && <> · retirado {euros(r.retirado)}</>} · stake {temporada.stake} € <span className="ambar">›</span>
+          Has puesto {euros(r.puesto)} · retirado {euros(r.retirado)} · stake {temporada.stake} € <span className="ambar">›</span>
         </button>
         {/* 13-nov-2026: Javi los quiere de vuelta, pero en pequeño. Yield = neto ÷ apostado; ROI = neto ÷ lo puesto (con recargas) */}
         {r.liquidadas > 0 && (
