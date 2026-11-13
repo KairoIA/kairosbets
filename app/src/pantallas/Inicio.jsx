@@ -1,5 +1,5 @@
 import { Grafica, Linea, masmenos } from "../piezas/comunes.jsx";
-import { euros, fechaCorta, redondear } from "../datos/util.js";
+import { euros, pct, fechaCorta, redondear } from "../datos/util.js";
 
 // El marcador: la cifra del bankroll manda y todo lo demás es tablero
 export default function Inicio({ temporada, bets, r, onBet, onLiquidar, onDinero, archivo }) {
@@ -26,6 +26,13 @@ export default function Inicio({ temporada, bets, r, onBet, onLiquidar, onDinero
         <button className="nota-heroe" style={{ display: "block", textAlign: "left", width: "100%" }} onClick={() => onDinero()}>
           Has puesto {euros(r.puesto)}{r.retirado > 0 && <> · retirado {euros(r.retirado)}</>} · stake {temporada.stake} € <span className="ambar">›</span>
         </button>
+        {/* 13-nov-2026: Javi los quiere de vuelta, pero en pequeño. Yield = neto ÷ apostado; ROI = neto ÷ lo puesto (con recargas) */}
+        {r.liquidadas > 0 && (
+          <div className="etiqueta" style={{ marginTop: 6 }}>
+            Yield <span className={r.yieldPct > 0 ? "pos" : r.yieldPct < 0 ? "neg" : ""}>{pct(r.yieldPct, 1)}</span>
+            {r.roiInicial != null && <> · ROI <span className={r.roiInicial > 0 ? "pos" : r.roiInicial < 0 ? "neg" : ""}>{pct(r.roiInicial, 1)}</span></>}
+          </div>
+        )}
         {!archivo && (
           <div className="opciones" style={{ marginTop: 12 }}>
             <button className="opcion" onClick={() => onDinero("ingreso")}>+ Meter</button>
