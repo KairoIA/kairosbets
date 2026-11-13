@@ -335,7 +335,7 @@ export default function App() {
           <div className="tira" style={{ width: `${PESTANAS.length * 100}%`, transform: `translateX(-${idx * (100 / PESTANAS.length)}%)` }}>
             {PESTANAS.map((p) => (
               <div key={p.id} className="panel" style={{ width: `${100 / PESTANAS.length}%` }}>
-                {p.id === "inicio" && <Inicio temporada={temporada} bets={bets} r={r} archivo={archivo} onBet={(b) => setVista({ tipo: "detalle", id: b.id })} onLiquidar={liquidar} onDinero={() => setVista({ tipo: "dinero" })} />}
+                {p.id === "inicio" && <Inicio temporada={temporada} bets={bets} r={r} archivo={archivo} onBet={(b) => setVista({ tipo: "detalle", id: b.id })} onLiquidar={liquidar} onDinero={(t) => setVista({ tipo: "dinero", inicial: t })} />}
                 {p.id === "grafica" && <PestanaGrafica temporada={temporada} bets={bets} r={r} onBet={(b) => setVista({ tipo: "detalle", id: b.id })} />}
                 {p.id === "historial" && <PestanaHistorial bets={bets} onBet={(b) => setVista({ tipo: "detalle", id: b.id })} />}
               </div>
@@ -357,7 +357,7 @@ export default function App() {
       {detalle && <Detalle key={detalle.id} bet={detalle} onVolver={() => setVista(null)} onGuardar={cambiarApuesta} onBorrar={borrarApuesta} />}
       {vista?.tipo === "nueva" && <NuevaApuesta temporada={activa} onVolver={() => setVista(null)} onGuardar={(b) => ponerApuestas(activa.id, [...(datos.apuestas[activa.id] || []), b])} />}
       {vista?.tipo === "ajustes" && ajustes}
-      {vista?.tipo === "dinero" && <Dinero temporada={temporada} r={r} onVolver={() => setVista(null)} onGuardar={guardarMovimiento} onBorrar={borrarMovimiento} />}
+      {vista?.tipo === "dinero" && <Dinero key={vista.inicial || "ver"} tipoInicial={vista.inicial} temporada={temporada} r={r} onVolver={() => setVista(null)} onGuardar={guardarMovimiento} onBorrar={borrarMovimiento} />}
       {vista?.tipo === "temporadas" && (
         <ListaTemporadas temporadas={temporadas} apuestas={datos.apuestas} viendo={temporada.id} onVolver={() => setVista(null)}
           onVer={(id) => { setVerId(id); setTab("inicio"); setVista(null); }} onCerrar={() => setVista({ tipo: "empezar" })} onExcel={bajarExcel} />

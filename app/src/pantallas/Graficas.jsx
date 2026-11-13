@@ -1,24 +1,16 @@
 import { useState } from "react";
 import { Grafica, Insignia, Linea, masmenos } from "../piezas/comunes.jsx";
-import { estado, maxDrawdown, drawdownActual, rachas } from "../datos/calculos.js";
-import { pct, fechaCorta } from "../datos/util.js";
+import { estado, extremos, peorCaida, rachas } from "../datos/calculos.js";
+import { fechaCorta } from "../datos/util.js";
 
-export function PestanaGrafica({ temporada, bets, r, onBet }) {
+export function PestanaGrafica({ temporada, bets, onBet }) {
   const [sel, setSel] = useState(null);
   const hechas = bets.filter((b) => b.result !== "pending");
   const elegida = sel && bets.find((b) => b.id === sel);
-  // Máximo del bankroll en la temporada (contando con lo que había al empezar) y el máximo drawdown
-  const serie = [{ id: "inicio", date: temporada.inicio, bankroll: temporada.bankrollInicial }, ...hechas.filter((b) => b.bankroll != null)];
-  const maximo = serie.reduce((m, p) => (p.bankroll > m.bankroll ? p : m), serie[0]);
-  // Drawdowns solo con resultados (12-oct-2026): retirar dinero no es perder ni meterlo es ganar.
-  // El % es la parte del bankroll que se perdió en el bache: caída ÷ (bankroll real en el fondo + caída). Antes iba
-  // sobre el pico de resultados y, al perderse enteros los 15 € iniciales, se quedaba en −100 % para siempre (Javi,
-  // 12-oct: «si llego a 200 y bajo a 100, eso es un 50 %»).
-  const rinde = serie.map((p) => (p.id === "inicio" ? { ...p, real: p.bankroll } : { ...p, bankroll: p.rinde, real: p.bankroll }));
-  const sobreBankroll = (d, fondo) => ({ ...d, pct: d.euros > 0 && fondo && fondo.real + d.euros > 0 ? (d.euros / (fondo.real + d.euros)) * 100 : 0 });
-  const dd0 = maxDrawdown(rinde);
-  const dd = sobreBankroll(dd0, dd0.fondo);
-  const ahora = sobreBankroll(drawdownActual(rinde), rinde[rinde.length - 1]);
+  // Todo sobre el resultado acumulado (13-nov-2026): empieza en 0 y solo lo mueven las apuestas
+  const serie = [{ id: "inicio", date: temporada.inicio, neto: 0 }, ...hechas.filter((b) => b.neto != null)];
+  const { maximo, minimo } = extremos(serie);
+  const caida = peorCaida(serie);
   const cuando = (p) => (p.id === "inicio" ? "al empezar" : fechaCorta(p.date));
   const { mejor, peor } = rachas(bets);
   // «2 seguidas · 10 → 11 oct» (el mes una sola vez si es el mismo, para que quepa en una línea)
@@ -27,49 +19,35 @@ export function PestanaGrafica({ temporada, bets, r, onBet }) {
     const fechas = r.desde === r.hasta ? d : r.desde.slice(0, 7) === r.hasta.slice(0, 7) ? `${d.split(" ")[0]} → ${h}` : `${d} → ${h}`;
     return `${r.n} seguida${r.n === 1 ? "" : "s"} · ${fechas}`;
   };
+  const pie = (txt) => <span className="etiqueta" style={{ display: "block", marginTop: 5 }}>{txt}</span>;
   return (
     <div className="scroll">
-      <div className="heroe" style={{ paddingTop: 14 }}>
-        <div className="tres cuatro" style={{ marginTop: 0, borderTop: 0 }}>
-          <div><span className="etiqueta">Bankroll</span><b className="ambar">{r.bankroll.toFixed(2)}</b></div>
-          <div><span className="etiqueta">Neto</span><b className={r.neto > 0 ? "pos" : r.neto < 0 ? "neg" : ""}>{masmenos(r.neto)}</b></div>
-          <div><span className="etiqueta">Yield</span><b className={r.yieldPct > 0 ? "pos" : r.yieldPct < 0 ? "neg" : ""}>{r.yieldPct == null ? "—" : pct(r.yieldPct, 1)}</b></div>
-          <div><span className="etiqueta">Cuota med.</span><b>{r.cuotaMedia == null ? "—" : r.cuotaMedia.toFixed(2)}</b></div>
-        </div>
-      </div>
-      <div className="dinero" style={{ paddingBottom: 2 }}>
-        <div><span className="etiqueta">Máximo histórico</span><b className="pos">{maximo.bankroll.toFixed(2)}<small> €</small></b><span className="etiqueta" style={{ display: "block", marginTop: 5 }}>{cuando(maximo)}</span></div>
-        <div>
-          <span className="etiqueta">Drawdown actual</span>
-          <b className={ahora.euros > 0 ? "neg" : "pos"}>{ahora.euros > 0 ? "−" + ahora.euros.toFixed(2) : "0.00"}<small> €</small></b>
-          <span className="etiqueta" style={{ display: "block", marginTop: 5 }}>{ahora.euros > 0 ? `−${ahora.pct.toFixed(1)}% desde ${cuando(ahora.pico)}` : "en máximos"}</span>
-        </div>
+      <div className="dinero" style={{ paddingTop: 14, paddingBottom: 2 }}>
+        <div><span className="etiqueta">Máximo</span><b className={maximo.neto > 0 ? "pos" : ""}>{masmenos(maximo.neto) || "0.00"}<small> €</small></b>{pie(cuando(maximo))}</div>
+        <div><span className="etiqueta">Mínimo</span><b className={minimo.neto < 0 ? "neg" : ""}>{masmenos(minimo.neto) || "0.00"}<small> €</small></b>{pie(cuando(minimo))}</div>
         <div style={{ gridColumn: "1 / -1" }}>
-          {/* Javi (06-oct): lo que cayó en € y en %, y en pequeño al lado las fechas del pico y del fondo */}
+          {/* La bajada que más daño hizo, venga del máximo o de cualquier otro punto alto */}
           <div className="entre">
-            <span className="etiqueta">Máx. drawdown histórico</span>
-            {dd.euros > 0 && <span className="etiqueta">{cuando(dd.pico)} → {cuando(dd.fondo)}</span>}
+            <span className="etiqueta">Peor caída</span>
+            {caida.euros > 0 && <span className="etiqueta">{cuando(caida.pico)} → {cuando(caida.fondo)}</span>}
           </div>
-          <b className={dd.euros > 0 ? "neg" : ""}>
-            {dd.euros > 0 ? "−" + dd.euros.toFixed(2) : "0.00"}<small> €</small>
-            <span style={{ marginLeft: 22 }}>{dd.euros > 0 ? "−" + dd.pct.toFixed(1) : "0.0"}<small> %</small></span>
-          </b>
+          <b className={caida.euros > 0 ? "neg" : ""}>{caida.euros > 0 ? "−" + caida.euros.toFixed(2) : "0.00"}<small> €</small></b>
+          {pie(caida.euros > 0 ? `en ${caida.apuestas} apuesta${caida.apuestas === 1 ? "" : "s"}` : "sin caídas aún")}
         </div>
-        {/* Javi (12-oct): la mejor y la peor racha, en €; debajo cuántas seguidas y cuándo */}
         <div>
           <span className="etiqueta">Mejor racha</span>
           <b className={mejor ? "pos" : ""}>{mejor ? "+" + mejor.euros.toFixed(2) : "—"}<small> €</small></b>
-          <span className="etiqueta" style={{ display: "block", marginTop: 5 }}>{mejor ? tramo(mejor) : "sin rachas aún"}</span>
+          {pie(mejor ? tramo(mejor) : "sin rachas aún")}
         </div>
         <div>
           <span className="etiqueta">Peor racha</span>
           <b className={peor ? "neg" : ""}>{peor ? "−" + Math.abs(peor.euros).toFixed(2) : "—"}<small> €</small></b>
-          <span className="etiqueta" style={{ display: "block", marginTop: 5 }}>{peor ? tramo(peor) : "sin rachas aún"}</span>
+          {pie(peor ? tramo(peor) : "sin rachas aún")}
         </div>
       </div>
       <div className="pad">
-        <div className="etiqueta" style={{ marginBottom: 12 }}>Bankroll · toca un punto</div>
-        <Grafica bets={bets} inicial={temporada.bankrollInicial} sel={sel} onPunto={(p) => setSel(sel === p.id ? null : p.id)} />
+        <div className="etiqueta" style={{ marginBottom: 12 }}>Resultado acumulado · toca un punto</div>
+        <Grafica bets={bets} sel={sel} onPunto={(p) => setSel(sel === p.id ? null : p.id)} />
       </div>
       {elegida && (
         <div style={{ padding: "0 18px 14px" }}>
@@ -80,7 +58,7 @@ export function PestanaGrafica({ temporada, bets, r, onBet }) {
             </div>
             <div className="desc" style={{ fontSize: 11.5, lineHeight: 1.45, marginBottom: 8 }}>{elegida.desc}</div>
             <div className="entre">
-              <span className="etiqueta">@{Number(elegida.odds).toFixed(2)} · {elegida.stake} € · bankroll {elegida.bankroll?.toFixed(2)}</span>
+              <span className="etiqueta">@{Number(elegida.odds).toFixed(2)} · {elegida.stake} € · acumulado {masmenos(elegida.neto) || "0.00"}</span>
               <b className="rotulo" style={{ fontSize: 22, color: "var(--c)" }}>{masmenos(elegida.pl)}</b>
             </div>
           </button>
@@ -88,10 +66,10 @@ export function PestanaGrafica({ temporada, bets, r, onBet }) {
       )}
       <div className="seccion" style={{ borderBottom: "1px solid var(--linea)" }}>
         <span className="etiqueta">Liquidadas · {hechas.length}</span>
-        <span className="etiqueta">P&amp;L · bankroll</span>
+        <span className="etiqueta">P&amp;L · acumulado</span>
       </div>
       {[...hechas].reverse().map((b) => (
-        <Linea key={b.id} bet={b} conBank sel={sel === b.id} onClick={() => setSel(sel === b.id ? null : b.id)} />
+        <Linea key={b.id} bet={b} conNeto sel={sel === b.id} onClick={() => setSel(sel === b.id ? null : b.id)} />
       ))}
       <div className="hueco" />
     </div>

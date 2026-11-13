@@ -24,34 +24,61 @@ const negativa = (b) => b.result === "loss" || (b.result === "cashout" && b.pl !
 // Orden de la temporada: por fecha y, el mismo día, por orden de alta (sort estable)
 export const ordenar = (bets) => [...bets].sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
 
-// Dinero de Javi que entra o sale de la cuenta durante la temporada (12-oct-2026, Javi: «la primera apuesta se
-// pierde y tengo que poner otros 15… quiero ver lo que ha salido de mi bolsillo y lo que voy retirando»).
-// temporada.movimientos = [{ id, fecha, tipo: "ingreso" | "retirada", importe, nota }]. El bankroll inicial es el
-// primer dinero que puso; los ingresos se suman a lo puesto y las retiradas a lo retirado. NO son ni ganancia ni pérdida.
-export function dinero(inicial, movimientos = []) {
-  const suma = (tipo) => redondear((movimientos || []).filter((m) => m.tipo === tipo).reduce((a, m) => a + (Number(m.importe) || 0), 0));
-  const ingresos = suma("ingreso"), retirado = suma("retirada");
-  return { ingresos, retirado, puesto: redondear((inicial || 0) + ingresos) };
+// Dinero de Javi que entra o sale de la cuenta durante la temporada (12-oct-2026). temporada.movimientos =
+// [{ id, fecha, tipo: "ingreso" | "retirada", importe, nota }]: los que apunta él. NO son ni ganancia ni pérdida.
+// RECARGAS AUTOMÁTICAS (Javi, 13-nov-2026: «el bankroll debería ser el dinero disponible… contando con los 15 € de
+// stake que se ponen nuevos si estamos under the water»): si al echar una apuesta no queda dinero libre para su
+// stake, la app cuenta que Javi mete ese stake de su bolsillo. Si metió otra cantidad, la apunta él a mano y la
+// automática ya no sale (solo salta cuando no llega). Se calculan siempre: si se corrige una apuesta, se recalculan.
+// Cómo se cuenta: por fechas; cada día entra primero el dinero que apuntó él, luego se echan las apuestas de ese día
+// (sale su stake) y luego vuelven las liquidadas (stake + beneficio). Las que siguen en juego tienen el stake fuera.
+export function cuenta(bets, inicial, movimientos = []) {
+  const movs = [...(movimientos || [])].sort((a, b) => (a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : 0));
+  const orden = ordenar(bets);
+  let caja = inicial || 0, neto = 0, i = 0;
+  const recargas = [], porId = {};
+  const hasta = (fecha) => {
+    for (; i < movs.length && (fecha == null || movs[i].fecha <= fecha); i++) caja = redondear(caja + (movs[i].tipo === "retirada" ? -1 : 1) * (Number(movs[i].importe) || 0));
+  };
+  for (let k = 0; k < orden.length; ) {
+    const fecha = orden[k].date;
+    const dia = [];
+    while (k < orden.length && orden[k].date === fecha) dia.push(orden[k++]);
+    hasta(fecha);
+    for (const b of dia) {
+      const stake = Number(b.stake) || 0;
+      if (stake > 0 && caja < stake - 0.005) {
+        const importe = redondear(caja < 0 ? stake - caja : stake);
+        recargas.push({ id: "auto-" + b.id, fecha, tipo: "ingreso", importe, auto: true, nota: b.desc });
+        caja = redondear(caja + importe);
+      }
+      caja = redondear(caja - stake);
+    }
+    for (const b of dia) {
+      if (!liquidada(b)) { porId[b.id] = { bankroll: null, neto: null }; continue; }
+      const pl = b.pl == null ? 0 : b.pl;
+      caja = redondear(caja + (Number(b.stake) || 0) + pl);
+      neto = redondear(neto + pl);
+      porId[b.id] = { bankroll: b.pl == null ? null : caja, neto: b.pl == null ? null : neto };
+    }
+  }
+  hasta(null);
+  return { caja, recargas, porId };
 }
 
-// Cada apuesta liquidada con el bankroll que deja detrás: «bankroll» = el del método (con lo que metió o
-// retiró Javi hasta esa fecha; el mismo día, el dinero va antes que las apuestas) y «rinde» = bankroll inicial + neto
-// acumulado, sin ingresos ni retiradas (para el máximo y los drawdowns: retirar no es perder).
+export function dinero(inicial, movimientos = [], recargas = []) {
+  const todos = [...(movimientos || []), ...recargas];
+  const suma = (tipo, auto) => redondear(todos.filter((m) => m.tipo === tipo && (auto == null || !!m.auto === auto)).reduce((a, m) => a + (Number(m.importe) || 0), 0));
+  const ingresos = suma("ingreso"), retirado = suma("retirada");
+  return { ingresos, recargado: suma("ingreso", true), retirado, puesto: redondear((inicial || 0) + ingresos) };
+}
+
+// Cada apuesta con lo que deja detrás: «bankroll» = dinero en la cuenta del método justo después de liquidarla (con
+// lo metido, recargado y retirado) y «neto» = resultado acumulado de la temporada (sin dinero de su bolsillo: para la
+// gráfica, el máximo, el mínimo y la peor caída; retirar no es perder ni meter es ganar).
 export function conBankroll(bets, inicial, movimientos = []) {
-  const movs = [...(movimientos || [])].sort((a, b) => (a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : 0));
-  let bank = inicial, rinde = inicial, i = 0;
-  const hasta = (fecha) => {
-    for (; i < movs.length && movs[i].fecha <= fecha; i++) bank = redondear(bank + (movs[i].tipo === "retirada" ? -1 : 1) * (Number(movs[i].importe) || 0));
-  };
-  return ordenar(bets).map((b) => {
-    hasta(b.date);
-    if (liquidada(b) && b.pl != null) {
-      bank = redondear(bank + b.pl);
-      rinde = redondear(rinde + b.pl);
-      return { ...b, bankroll: bank, rinde };
-    }
-    return { ...b, bankroll: null, rinde: null };
-  });
+  const { porId } = cuenta(bets, inicial, movimientos);
+  return ordenar(bets).map((b) => ({ ...b, ...(porId[b.id] || { bankroll: null, neto: null }) }));
 }
 
 export function racha(bets) {
@@ -90,15 +117,17 @@ export function rachas(bets) {
 // Todo lo que enseña el inicio (nombres elegidos por Javi el 05-oct-2026):
 //   yield = beneficio ÷ total apostado (lo bien que apuesta; el «ROI» de las casas y los tipsters)
 //   ROI   = beneficio ÷ lo que ha salido de su bolsillo (bankroll inicial + lo que fue metiendo; 12-oct-2026)
-//   bankroll = el del método: puesto − retirado + neto (el que vale es este; el saldo de bet365 NO, Javi echa allí otras apuestas)
+//   bankroll = el del método: puesto (con las recargas automáticas) − retirado + neto (el que vale es este; el saldo de
+//   bet365 NO, Javi echa allí otras apuestas). En pantalla manda el «disponible» = bankroll − lo que está en juego.
 export function resumen(bets, inicial, movimientos = []) {
   const hechas = bets.filter(liquidada);
   const enJuego = bets.filter((b) => b.result === "pending");
   const neto = redondear(hechas.reduce((a, b) => a + (b.pl || 0), 0));
   const apostado = hechas.reduce((a, b) => a + (b.stake || 0), 0);
-  const { puesto, retirado, ingresos } = dinero(inicial, movimientos);
-  const bankroll = redondear(puesto - retirado + neto);
+  const { caja, recargas } = cuenta(bets, inicial, movimientos);
+  const { puesto, retirado, ingresos, recargado } = dinero(inicial, movimientos, recargas);
   const comprometido = redondear(enJuego.reduce((a, b) => a + (b.stake || 0), 0));
+  const bankroll = redondear(caja + comprometido);   // = puesto − retirado + neto
   const cuotas = hechas.map((b) => b.odds).filter((o) => o > 0);
   return {
     total: bets.length,
@@ -114,9 +143,11 @@ export function resumen(bets, inicial, movimientos = []) {
     apostado: redondear(apostado),
     yieldPct: apostado > 0 ? (neto / apostado) * 100 : null,
     bankroll,
-    disponible: redondear(bankroll - comprometido),
+    disponible: caja,          // lo que hay libre en la cuenta ahora (lo que está en juego, aparte)
     puesto,
     ingresos,
+    recargado,
+    recargas,
     retirado,
     roiInicial: puesto > 0 ? (neto / puesto) * 100 : null,   // el nombre se queda; ahora es sobre lo puesto de su bolsillo
     cuotaMedia: cuotas.length ? cuotas.reduce((a, b) => a + b, 0) / cuotas.length : null,
@@ -145,23 +176,29 @@ export function winRate(hechas) {
   return a + d > 0 ? (a / (a + d)) * 100 : null;
 }
 
-// Máximo drawdown (Javi, 06-oct): la mayor caída del bankroll desde un pico hasta el punto más bajo posterior.
-// serie: [{ bankroll, date, id }] en orden. Devuelve { euros, pct, pico, fondo } (euros = 0 si nunca bajó).
-export function maxDrawdown(serie) {
-  let pico = serie[0], mejor = { euros: 0, pct: 0, pico: null, fondo: null };
+// Lo que enseña la Gráfica (Javi, 13-nov-2026: «mi máximo de la temporada, el mínimo y la caída más prolongada, da
+// igual que sea del máximo o de otro punto: la que más daño ha hecho»). Todo sobre el resultado acumulado (neto),
+// empezando en 0: así meter o retirar dinero no lo mueve.
+// serie: [{ id, date, neto }] en orden, con el punto de salida { id: "inicio", neto: 0 } delante.
+export function extremos(serie) {
+  let maximo = serie[0], minimo = serie[0];
   for (const p of serie) {
-    if (p.bankroll > pico.bankroll) pico = p;
-    const caida = pico.bankroll - p.bankroll;
-    if (caida > mejor.euros + 1e-9) mejor = { euros: redondear(caida), pct: pico.bankroll > 0 ? (caida / pico.bankroll) * 100 : null, pico, fondo: p };
+    if (p.neto > maximo.neto) maximo = p;
+    if (p.neto < minimo.neto) minimo = p;
   }
-  return mejor;
+  return { maximo, minimo };
 }
 
-// Drawdown actual: cuánto está ahora el bankroll por debajo de su máximo. { euros, pct, pico } (euros = 0 en máximos)
-export function drawdownActual(serie) {
-  const pico = serie.reduce((m, p) => (p.bankroll > m.bankroll ? p : m), serie[0]);
-  const caida = pico.bankroll - serie[serie.length - 1].bankroll;
-  return { euros: redondear(Math.max(0, caida)), pct: pico.bankroll > 0 ? (Math.max(0, caida) / pico.bankroll) * 100 : null, pico };
+// Peor caída: la mayor bajada en euros desde un punto alto hasta el más bajo que vino después (sea o no el máximo de
+// la temporada). { euros, pico, fondo, apuestas } (euros = 0 si nunca bajó; apuestas = cuántas hubo en la bajada).
+export function peorCaida(serie) {
+  let pico = 0, mejor = { euros: 0, pico: null, fondo: null, apuestas: 0 };
+  serie.forEach((p, i) => {
+    if (p.neto > serie[pico].neto) pico = i;
+    const caida = serie[pico].neto - p.neto;
+    if (caida > mejor.euros + 1e-9) mejor = { euros: redondear(caida), pico: serie[pico], fondo: p, apuestas: i - pico };
+  });
+  return mejor;
 }
 
 // Beneficio de una apuesta a partir de lo que devolvió la casa

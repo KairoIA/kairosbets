@@ -50,7 +50,7 @@ export function libroExcel(temporadas, apuestas) {
   const n = (x) => ({ v: x == null ? null : Math.round(x * 100) / 100, s: 3 });
   const f = (x) => ({ v: serial(x), s: 2 });
 
-  const filasResumen = [["Temporada", "Inicio", "Fin", "Bankroll inicial", "De tu bolsillo (inicial + metido)", "Retirado", "Apuestas", "Ganadas", "Perdidas", "Cash out", "En juego", "Apostado", "Neto", "Yield (neto ÷ apostado)", "ROI (neto ÷ de tu bolsillo)", "Win rate (cash out ponderado)", "En la cuenta", "Estado"]];
+  const filasResumen = [["Temporada", "Inicio", "Fin", "Bankroll inicial", "De tu bolsillo (inicial + metido + recargas)", "Retirado", "Apuestas", "Ganadas", "Perdidas", "Cash out", "En juego", "Apostado", "Neto", "Yield (neto ÷ apostado)", "ROI (neto ÷ de tu bolsillo)", "Win rate (cash out ponderado)", "En la cuenta", "Estado"]];
   const filasDinero = [["Temporada", "Fecha", "Movimiento", "Importe", "Nota"]];
   const hojas = lista.map((t, i) => {
     const bets = conBankroll(apuestas[t.id] || [], t.bankrollInicial, t.movimientos);
@@ -58,8 +58,8 @@ export function libroExcel(temporadas, apuestas) {
     filasResumen.push([t.nombre, f(t.inicio), f(t.fin), n(t.bankrollInicial), n(r.puesto), n(r.retirado), r.total, r.ganadas, r.perdidas, r.cashouts, r.enJuego,
       n(r.apostado), n(r.neto), { v: r.yieldPct == null ? null : r.yieldPct / 100, s: 4 }, { v: r.roiInicial == null ? null : r.roiInicial / 100, s: 4 }, { v: r.winRate == null ? null : r.winRate / 100, s: 4 }, n(r.bankroll), t.id === temporadas.activa ? "En curso" : "Archivada"]);
     filasDinero.push([t.nombre, f(t.inicio), "Al empezar", n(t.bankrollInicial), ""]);
-    for (const m of [...(t.movimientos || [])].sort((a, b) => (a.fecha < b.fecha ? -1 : 1)))
-      filasDinero.push([t.nombre, f(m.fecha), m.tipo === "retirada" ? "Retirada" : "Ingreso", n(m.tipo === "retirada" ? -m.importe : m.importe), m.nota || ""]);
+    for (const m of [...(t.movimientos || []), ...(r.recargas || [])].sort((a, b) => (a.fecha < b.fecha ? -1 : 1)))
+      filasDinero.push([t.nombre, f(m.fecha), m.auto ? "Recarga automática" : m.tipo === "retirada" ? "Retirada" : "Ingreso", n(m.tipo === "retirada" ? -m.importe : m.importe), m.nota || ""]);
     const filas = [["Fecha", "Tipo", "Apuesta", "Cuota", "Stake", "Resultado", "P&L", "Bankroll", "Notas"]];
     for (const b of bets) filas.push([f(b.date), b.type, b.desc, n(b.odds), n(b.stake), RESULTADO[b.result] || b.result, n(b.pl), n(b.bankroll), b.notes || ""]);
     return { nombre: pestanas[i], xml: hoja(filas, [11, 11, 60, 8, 8, 11, 10, 11, 40]) };

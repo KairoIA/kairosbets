@@ -14,7 +14,7 @@ export const colorImporte = (n) => (n == null ? "tenue" : n > 0 ? "pos" : n < 0 
 export const masmenos = (n) => (n == null || isNaN(n) ? "—" : (Math.abs(n) < 0.005 ? "" : n > 0 ? "+" : "−") + Math.abs(n).toFixed(2));
 
 // Una apuesta en una lista: fecha · apuesta · P&L (y el bankroll que deja, si se pide)
-export function Linea({ bet, onClick, sel, conBank }) {
+export function Linea({ bet, onClick, sel, conBank, conNeto }) {
   const e = estado(bet);
   const pendiente = bet.result === "pending";
   return (
@@ -27,14 +27,17 @@ export function Linea({ bet, onClick, sel, conBank }) {
       <span className="importe">
         <span className={pendiente ? "ambar" : colorImporte(bet.pl)} style={{ display: "block" }}>{pendiente ? "EN JUEGO" : masmenos(bet.pl)}</span>
         {conBank && bet.bankroll != null && <span className="sub" style={{ display: "block" }}>{euros(bet.bankroll)}</span>}
+        {conNeto && bet.neto != null && <span className="sub" style={{ display: "block" }}>{masmenos(bet.neto) || "0.00"}</span>}
       </span>
     </button>
   );
 }
 
-// Gráfica del bankroll. `mini`: la del inicio (sin puntos ni fechas, con el último punto en ámbar)
-export function Grafica({ bets, inicial, onPunto, sel, mini }) {
-  const hechas = bets.filter((b) => b.result !== "pending" && b.bankroll != null);
+// Gráfica del resultado acumulado (desde 13-nov-2026; antes, del bankroll, que saltaba al meter dinero): empieza en 0
+// y la raya discontinua es el 0. `mini`: la del inicio (sin puntos ni fechas, con el último punto en ámbar)
+export function Grafica({ bets, onPunto, sel, mini }) {
+  const inicial = 0;
+  const hechas = bets.filter((b) => b.result !== "pending" && b.neto != null).map((b) => ({ ...b, bankroll: b.neto }));
   if (hechas.length < 2) return mini ? null : <div className="pad tenue" style={{ textAlign: "center", fontSize: 11 }}>Hacen falta 2 apuestas liquidadas para la gráfica</div>;
   const W = 360, H = mini ? 84 : 210;
   const P = mini ? { t: 8, r: 8, b: 6, l: 0 } : { t: 14, r: 14, b: 26, l: 40 };
@@ -47,7 +50,7 @@ export function Grafica({ bets, inicial, onPunto, sel, mini }) {
   const cada = Math.ceil(pts.length / 5);
   const ult = pts.length - 1;
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ display: "block", overflow: "visible" }} aria-label="Evolución del bankroll">
+    <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ display: "block", overflow: "visible" }} aria-label="Resultado acumulado">
       {marcas.map((v, i) => (
         <g key={i}>
           <line x1={P.l} y1={y(v)} x2={W - P.r} y2={y(v)} stroke="var(--linea)" />

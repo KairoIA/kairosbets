@@ -23,11 +23,9 @@ export function ListaTemporadas({ temporadas, apuestas, viendo, onVer, onVolver,
               {fechaCorta(t.inicio)} → {t.fin ? fechaCorta(t.fin) : "hoy"} · {r.total} apuestas{viendo === t.id ? " · la estás viendo" : ""}
             </div>
             <div className="cifras">
-              <Insignia>{euros(r.puesto)} → {euros(r.bankroll)}</Insignia>
+              <Insignia>Puesto {euros(r.puesto)} · queda {euros(r.bankroll)}</Insignia>
               {r.retirado > 0 && <Insignia>Retirado {euros(r.retirado)}</Insignia>}
               <Insignia c={r.neto >= 0 ? "win" : "loss"}>{signo(r.neto)}</Insignia>
-              <Insignia c={r.yieldPct >= 0 ? "pending" : "loss"}>Yield {pct(r.yieldPct, 1)}</Insignia>
-              {r.roiInicial != null && r.liquidadas > 0 && <Insignia>ROI {pct(r.roiInicial)}</Insignia>}
               {r.winRate != null && <Insignia>Win {r.winRate.toFixed(0)}%</Insignia>}
               {r.enJuego > 0 && <Insignia c="pending">{r.enJuego} en juego</Insignia>}
             </div>

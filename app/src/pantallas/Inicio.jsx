@@ -1,5 +1,5 @@
 import { Grafica, Linea, masmenos } from "../piezas/comunes.jsx";
-import { euros, pct, fechaCorta, redondear } from "../datos/util.js";
+import { euros, fechaCorta, redondear } from "../datos/util.js";
 
 // El marcador: la cifra del bankroll manda y todo lo demás es tablero
 export default function Inicio({ temporada, bets, r, onBet, onLiquidar, onDinero, archivo }) {
@@ -8,40 +8,33 @@ export default function Inicio({ temporada, bets, r, onBet, onLiquidar, onDinero
   const posible = redondear(enJuego.reduce((a, b) => a + b.stake * b.odds - b.stake, 0));
   const cifra = r.disponible.toFixed(2);
   const rc = r.racha;
-  const etiqueta = archivo ? (r.enJuego ? "Bankroll (con apuestas en juego)" : "Bankroll final") : "Bankroll disponible";
+  const etiqueta = archivo ? "Dinero al cerrar" : "Dinero disponible";
 
   return (
     <div className="scroll">
+      {/* 13-nov-2026 (Javi: «exceso de métricas»): arriba solo el dinero libre, el resultado, el win rate y la racha */}
       <div className="heroe">
         <div className="etiqueta">{etiqueta}</div>
         <div className={`cifra ${cifra.length >= 7 ? "larga" : ""}`}>{cifra}<span>€</span></div>
+        {r.comprometido > 0 && <div className="etiqueta" style={{ marginTop: 4 }}>+ {r.comprometido.toFixed(2)} € en juego</div>}
         <div className="tres">
           <div><span className="etiqueta">Neto</span><b className={r.neto > 0 ? "pos" : r.neto < 0 ? "neg" : ""}>{masmenos(r.neto)}</b></div>
-          <div><span className="etiqueta">Yield</span><b className={r.yieldPct > 0 ? "pos" : r.yieldPct < 0 ? "neg" : ""}>{r.yieldPct == null ? "—" : pct(r.yieldPct, 1)}</b></div>
           <div><span className="etiqueta">Win rate</span><b>{r.winRate == null ? "—" : r.winRate.toFixed(0) + "%"}</b></div>
+          <div><span className="etiqueta">Racha</span><b className={rc.tipo === "W" ? "pos" : rc.tipo === "L" ? "neg" : "tenue"}>{rc.n ? rc.n + (rc.tipo === "W" ? " ✓" : " ✗") : "—"}</b></div>
         </div>
-        {/* 12-oct-2026: lo que ha salido de su bolsillo (no solo el bankroll inicial) y lo retirado; toca → «Tu dinero» */}
-        <button className="nota-heroe" style={{ display: "block", textAlign: "left", width: "100%" }} onClick={onDinero}>
-          De tu bolsillo {euros(r.puesto)}{r.retirado > 0 && <> · retirado {euros(r.retirado)}</>}
-          {r.roiInicial != null && r.liquidadas > 0 && <> · ROI {pct(r.roiInicial)}</>} · stake {temporada.stake} € <span className="ambar">›</span>
+        {/* Lo que ha salido de su bolsillo (con las recargas automáticas) y lo retirado; toca → «Tu dinero» */}
+        <button className="nota-heroe" style={{ display: "block", textAlign: "left", width: "100%" }} onClick={() => onDinero()}>
+          Has puesto {euros(r.puesto)}{r.retirado > 0 && <> · retirado {euros(r.retirado)}</>} · stake {temporada.stake} € <span className="ambar">›</span>
         </button>
+        {!archivo && (
+          <div className="opciones" style={{ marginTop: 12 }}>
+            <button className="opcion" onClick={() => onDinero("ingreso")}>+ Meter</button>
+            <button className="opcion" onClick={() => onDinero("retirada")}>− Retirar</button>
+          </div>
+        )}
       </div>
 
-      {/* Apostado = lo jugado en las liquidadas (así yield = neto ÷ apostado); lo que sigue en juego va aparte */}
-      <div className="dinero">
-        <div><span className="etiqueta">Total apostado</span><b>{r.apostado.toFixed(2)}<small> €</small></b></div>
-        <div><span className="etiqueta">En juego</span><b className={r.enJuego ? "ambar" : ""}>{r.comprometido.toFixed(2)}<small> €</small></b></div>
-      </div>
-
-      <div className="tablero cinco">
-        <div><b>{r.total}</b><span>Total</span></div>
-        <div><b className="pos">{r.ganadas}</b><span>Ganadas</span></div>
-        <div><b className="neg">{r.perdidas}</b><span>Perdidas</span></div>
-        <div><b>{r.cashouts}</b><span>Cash out</span></div>
-        <div><b className={rc.tipo === "W" ? "ambar" : rc.tipo === "L" ? "neg" : "tenue"}>{rc.n ? rc.n + rc.tipo : "—"}</b><span>Racha</span></div>
-      </div>
-
-      <div className="mini-grafica"><Grafica mini bets={bets} inicial={temporada.bankrollInicial} /></div>
+      <div className="mini-grafica"><Grafica mini bets={bets} /></div>
 
       {!bets.length && (
         <div className="seccion" style={{ display: "block", padding: "28px 18px" }}>
