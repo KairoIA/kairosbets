@@ -71,13 +71,13 @@ export default function Dinero({ temporada, r, tipoInicial, onVolver, onGuardar,
             <div className="desc">{m.auto ? "Recarga automática" : m.tipo === "retirada" ? "Retiras" : "Metes"}{m.nota ? ` · ${m.nota}` : ""}</div>
             {borrar === m.id && <div className="sub neg">Pulsa otra vez para borrarlo</div>}
           </span>
-          <span className={`importe mono ${m.tipo === "retirada" ? "neg" : "pos"}`}>{m.tipo === "retirada" ? "−" : "+"}{Number(m.importe).toFixed(2)}</span>
+          <span className={`importe mono ${m.tipo === "retirada" ? "pos" : "neg"}`}>{m.tipo === "retirada" ? "−" : "+"}{Number(m.importe).toFixed(2)}</span>
         </button>
       ))}
       <div className="linea" style={{ padding: "10px 0" }}>
         <span className="f">{fechaCorta(temporada.inicio)}</span>
         <span className="texto"><div className="desc">Al empezar la temporada</div></span>
-        <span className="importe mono pos">+{euros(temporada.bankrollInicial).replace(" €", "")}</span>
+        <span className="importe mono neg">+{euros(temporada.bankrollInicial).replace(" €", "")}</span>
       </div>
       <div className="hueco" />
     </div>
