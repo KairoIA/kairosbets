@@ -35,16 +35,22 @@ export const ordenar = (bets) => [...bets].sort((a, b) => (a.date < b.date ? -1 
 export function cuenta(bets, inicial, movimientos = []) {
   const movs = [...(movimientos || [])].sort((a, b) => (a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : 0));
   const orden = ordenar(bets);
-  let caja = inicial || 0, neto = 0, i = 0;
-  const recargas = [], porId = {};
-  const hasta = (fecha) => {
-    for (; i < movs.length && (fecha == null || movs[i].fecha <= fecha); i++) caja = redondear(caja + (movs[i].tipo === "retirada" ? -1 : 1) * (Number(movs[i].importe) || 0));
+  let caja = inicial || 0, neto = 0;
+  const recargas = [], porId = {}, usados = new Set();
+  // Un ingreso del día entra al empezar el día; una retirada del día, al acabarlo (16-nov-2026: si se sacaba el dinero
+  // el mismo día que cobraba la apuesta, la app creía que no había saldo, inventaba una recarga y el bankroll no bajaba).
+  const aplicar = (m) => { usados.add(m); caja = redondear(caja + (m.tipo === "retirada" ? -1 : 1) * (Number(m.importe) || 0)); };
+  const hasta = (fecha, soloIngresos) => {
+    for (const m of movs) {
+      if (usados.has(m)) continue;
+      if (fecha == null || m.fecha < fecha || (m.fecha === fecha && (!soloIngresos || m.tipo !== "retirada"))) aplicar(m);
+    }
   };
   for (let k = 0; k < orden.length; ) {
     const fecha = orden[k].date;
     const dia = [];
     while (k < orden.length && orden[k].date === fecha) dia.push(orden[k++]);
-    hasta(fecha);
+    hasta(fecha, true);
     for (const b of dia) {
       const stake = Number(b.stake) || 0;
       if (stake > 0 && caja < stake - 0.005) {
@@ -61,6 +67,7 @@ export function cuenta(bets, inicial, movimientos = []) {
       neto = redondear(neto + pl);
       porId[b.id] = { bankroll: b.pl == null ? null : caja, neto: b.pl == null ? null : neto };
     }
+    hasta(fecha, false);
   }
   hasta(null);
   return { caja, recargas, porId };
